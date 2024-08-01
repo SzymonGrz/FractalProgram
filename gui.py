@@ -2,7 +2,6 @@ import tkinter as tk
 from matplotlib.figure import Figure 
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,  
 NavigationToolbar2Tk) 
-import math
 
 import fractals
 
@@ -298,26 +297,6 @@ def plot(plot1, canvas, points : list):
 
     plot1.scatter(points_x, points_y, s=0.09, c="g")
     canvas.draw()
-
-    # creating the Matplotlib toolbar 
-    # toolbar = NavigationToolbar2Tk(canvas, window) 
-    # toolbar.update() 
-  
-    # # placing the toolbar on the Tkinter window 
-    # canvas.get_tk_widget().pack() 
-
-
-# window = tk.Tk()
-# fig = Figure(figsize = (8, 8), dpi = 100)
-# plot1 = fig.add_subplot(111)
-# canvas = FigureCanvasTkAgg(fig, master = window)
-# plot_button = tk.Button(master = window, 
-#                     command = lambda : plot(test.paproc(10000)),
-#                      height = 2, 
-#                      width = 15, 
-#                     text = "Paproć Barnsley'a")
-# plot_button2 = tk.Button(master = window, command = lambda : plot(test.chaos_game_fractal(
-#     10000, 0.5, [(0,0), (10, 0), (5, 5*math.sqrt(3))])), height = 2, width = 15, text = "Dywan Sierpińskiego") 
 
 
 if __name__ == "__main__":
