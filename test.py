@@ -5,6 +5,7 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 from matplotlib.figure import Figure 
 import math
+from PIL import Image
 
 def mandelbrot():
 
@@ -13,17 +14,45 @@ def mandelbrot():
     z  = 0
     c  = x + y * 1j
 
-    iterations  = 10
-
+    iterations  = 20
+    
     for g in range(iterations):
         z=z**2 + c
 
     mask = np.abs(z) < 2
 
+    # img = Image.fromarray(mask, 'L')
+
     plt.imshow(mask.T,extent=[-2,1,-1.5,1.5])
 
-    plt.gray()
+    # plt.gray()
     plt.show()
+    # img.show()
+
+def mandelbrot_colored(size, iterations) :
+
+    y,x=np.ogrid[-2:2:size *1j,-2:2:size*1j]
+
+    z_array  = np.array(size * size)
+    c  = x + y * 1j
+
+    max_iterations = iterations
+
+    iterations_until_divergence = max_iterations + np.zeros(c.shape)
+
+    for h in range(size):
+        for w in range(size):
+            z = 0
+            for i in range(max_iterations):
+                z = z ** 2 + c[h][w]
+                if z * np.conj(z) > 4:
+                    iterations_until_divergence[h][w] = i
+                    break
+    plt.imshow(iterations_until_divergence, cmap=cm.gnuplot2)
+    plt.show()
+    
+                
+
 
 def mandelbrot2():
     x = -2
@@ -33,19 +62,23 @@ def mandelbrot2():
     points_y = []
 
     epsilon = 0.001
-    maxiterations = 10
+    maxiterations = 40
 
     while x < 2:
         while y < 2:
-            z = 0 + 0j
-            c = x + y * 1j
-            iterations = 0
-            while(abs(z) < 2 and iterations <= maxiterations):
-                z=z**2 + c
-                iterations += 1 
-            if(abs(z) < 2):
-                points_x.append(c.real)
-                points_y.append(c.imag)
+            z_real = 0
+            z_imag = 0
+            c_real = x
+            c_imag = y
+            # iterations = 0
+            for i in range(maxiterations):
+                z_real2 = z_real*z_real - z_imag*z_imag + c_real
+                z_imag = 2 * z_real* z_imag + c_imag
+                z_real = z_real2
+                # iterations += 1 
+            if(z_real*z_real+z_imag*z_imag < 4):
+                points_x.append(c_real)
+                points_y.append(c_imag)
             y += epsilon
         x += epsilon
         y = -2
@@ -82,6 +115,35 @@ def julia_set2(c):
     plt.scatter(points_x, points_y, s=0.5)
     plt.show()
 
+def julia_set3(c, size, iterations):
+    
+    y,x=np.ogrid[-1.4:1.4:size*1j,-1.4:1.4:size*1j]
+
+    z_array  = x + y * 1j
+
+    max_iterations  = iterations
+
+    iterations_until_divergence = max_iterations + np.zeros(z_array.shape)
+    not_already_diverged = iterations_until_divergence < 10000
+    diverged_in_past = iterations_until_divergence > 10000
+
+    for i in range(max_iterations):
+        z_array = z_array**2 + c
+        
+        z_size_array = z_array * np.conj(z_array)
+        diverging = z_size_array > 4
+
+        diverging_now = diverging & not_already_diverged
+        iterations_until_divergence[diverging_now]  = i
+        not_already_diverged = np.invert(diverging_now) & not_already_diverged
+
+        diverged_in_past = diverged_in_past | diverging_now
+        z_array[diverged_in_past] = 0
+
+    plt.imshow(iterations_until_divergence, cmap=cm.twilight_shifted)
+
+    # plt.gray()
+    plt.show()
 
 def julia_set(c):
 
@@ -127,6 +189,25 @@ def julia_set(c):
 #             for j in range(3):
 #                 if i != 1 or j != 1:
 #                     draw_fractal(ax, levels - 1, x + i * size3, y + j * size3, size3)
+
+
+def julia_set_main(c, size):
+    y,x=np.ogrid[-2:2:size*1j,-2:2:size*1j]
+
+    z  = x + y * 1j
+
+    iterations = 20
+
+    for g in range(iterations):
+        z=z**2 + c
+
+    mask = abs(z) < 2
+
+    plt.imshow(mask.T,extent=[-2,2,-2,2], cmap = cm.gnuplot2)
+    plt.show()
+
+
+
 
 
 def sierpinski_triangle_ifs(iterations):
@@ -521,14 +602,19 @@ def main():
     #chaos_game_fractal(1000000, 0.55, [(0,0), (0, 12) , (6, 6), (-6, 6)])
 
     # fractal(100000, chances = [78.747, 21.253], x_transform = [[0.824, 0.281, -0.1],[0.088, 0.281, 0.534]],
-    #         y_transform=[[-0.212, 0.864, 0.095],[-0.464, -0.378, 1.041]])
+    #          y_transform=[[-0.212, 0.864, 0.095],[-0.464, -0.378, 1.041]])
     
     # fractal(100000, chances = [1, 7, 7, 85], x_transform=[[0,0,0], [0.2, -0.26, 0], [-0.15, 0.28, 0], [0.85, 0.04,0]],
     #         y_transform=[[0, 0.16, 0],[0.23, 0.22, 1.6], [0.26, 0.24, 0.44], [-0.04, 0.85, 1.6]])
 
 
-    julia_set2(c = -0.1 - 0.65j)
+    #julia_set(c = -0.1 - 0.65j)
+    # julia_set2(c = 0.285 + 0.01j)
+    julia_set3(c = -0.4 + 0.6j, size=4000, iterations = 20)
     # mandelbrot2()
+    # mandelbrot_colored(1000, 70)
+    # mandelbrot()
+    # julia_set_main(c = 0.285 + 0.01j, size=5000)
 
 
 

@@ -77,6 +77,9 @@ def barnsley_fern(iterations: int):
 
 def affine_fractal(iterations, chances : list, x_transform : list, y_transform : list) :
 
+    if(len(chances) == 0 ):
+        return []
+
     points = []
 
     point = (random.uniform(0, 1), random.uniform(0, 1))
