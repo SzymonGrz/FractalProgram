@@ -6,6 +6,44 @@ import numpy as np
 from matplotlib.figure import Figure 
 import math
 from PIL import Image
+import ctypes
+# from numba import jit
+import time
+
+def mandelbrot_c():
+
+    lib = ctypes.CDLL('D:/Github/FractalProgram/mandelbrot.dll')
+
+    lib.mandelbrot_set.argtypes= [
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_int)
+    ]
+
+    width = 5000
+    height = 5000
+
+    output = np.zeros((width*height), dtype=np.int32)
+    lib.mandelbrot_set(width, height, 255, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+    n3 = output.reshape((height, width))
+
+    return n3
+    # plt.imshow(n3.T, extent=[-2, 1, -1.5, 1.5])
+    # plt.show()
+
+def julia_c(c):
+    lib = ctypes.CDLL('D:/Github/FractalProgram/mandelbrot.dll')
+
+    lib.julia_set.argtypes = [ ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float,
+            ctypes.POINTER(ctypes.c_int)]
+    
+    width = 5000
+    height = 5000
+
+    output = np.zeros((width*height), dtype=np.int32)
+    lib.julia_set(width, height, 255, c.real, c.imag, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+    n3 = output.reshape((height, width))
+    
+    return n3
+
 
 def mandelbrot():
 
@@ -14,7 +52,7 @@ def mandelbrot():
     z  = 0
     c  = x + y * 1j
 
-    iterations  = 20
+    iterations  = 40
     
     for g in range(iterations):
         z=z**2 + c
@@ -23,10 +61,10 @@ def mandelbrot():
 
     # img = Image.fromarray(mask, 'L')
 
-    plt.imshow(mask.T,extent=[-2,1,-1.5,1.5])
+    #plt.imshow(mask.T,extent=[-2,1,-1.5,1.5])
 
     # plt.gray()
-    plt.show()
+    #plt.show()
     # img.show()
 
 def mandelbrot_colored(size, iterations) :
@@ -50,13 +88,10 @@ def mandelbrot_colored(size, iterations) :
                     break
     plt.imshow(iterations_until_divergence, cmap=cm.gnuplot2)
     plt.show()
-    
-                
-
-
+                 
 def mandelbrot2():
     x = -2
-    y = -2
+    y = -1.5
 
     points_x = []
     points_y = []
@@ -64,8 +99,8 @@ def mandelbrot2():
     epsilon = 0.001
     maxiterations = 40
 
-    while x < 2:
-        while y < 2:
+    while x < 1:
+        while y < 1.5:
             z_real = 0
             z_imag = 0
             c_real = x
@@ -83,8 +118,9 @@ def mandelbrot2():
         x += epsilon
         y = -2
 
-    plt.scatter(points_x, points_y, s=0.5)
-    plt.show()
+    return(points_x, points_y)
+    # plt.scatter(points_x, points_y, s=0.5)
+    # plt.show()
 
 
 def julia_set2(c):
@@ -147,7 +183,7 @@ def julia_set3(c, size, iterations):
 
 def julia_set(c):
 
-    x_res, y_res = 300, 300
+    x_res, y_res = 1000, 1000
     xmin, xmax = -1.5, 1.5
     width = xmax - xmin
     ymin, ymax = -1.5, 1.5
@@ -607,16 +643,29 @@ def main():
     # fractal(100000, chances = [1, 7, 7, 85], x_transform=[[0,0,0], [0.2, -0.26, 0], [-0.15, 0.28, 0], [0.85, 0.04,0]],
     #         y_transform=[[0, 0.16, 0],[0.23, 0.22, 1.6], [0.26, 0.24, 0.44], [-0.04, 0.85, 1.6]])
 
-
-    #julia_set(c = -0.1 - 0.65j)
+    #0.285 + 0.01j
+    # julia_set(c = 0.285 + 0.01j)
     # julia_set2(c = 0.285 + 0.01j)
-    julia_set3(c = -0.4 + 0.6j, size=4000, iterations = 20)
+    # julia_set3(c = -0.4 + 0.6j, size=4000, iterations = 20)
     # mandelbrot2()
     # mandelbrot_colored(1000, 70)
-    # mandelbrot()
+    #mandelbrot()
     # julia_set_main(c = 0.285 + 0.01j, size=5000)
+    #mandelbrot_c()
+
+    # c = -0.75 + 0.11j
 
 
+    start_time = time.time()
+    x = julia_c(c = 0.285 + 0.01j)
+    # x = mandelbrot_c()
+    end_time = time.time()
+    print(f"Czas wykonania: {end_time - start_time : .4f} s")
+
+    plt.imshow(x.T, extent=[-2, 1, -1.5, 1.5])
+    plt.show()
+
+    
 
 
 if __name__ == '__main__':

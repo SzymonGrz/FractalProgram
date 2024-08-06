@@ -77,21 +77,25 @@ def barnsley_fern(iterations: int):
 
 def affine_fractal(iterations, chances : list, x_transform : list, y_transform : list) :
 
-    if(len(chances) == 0 ):
+    try:
+        if(len(chances) == 0 ):
+            return []
+
+        points = []
+
+        point = (0, 0) #(random.uniform(0, 1), random.uniform(0, 1))
+
+        for i in range(iterations):
+            x = random.uniform(0, 100)
+            for j in range(0, len(chances)):
+                suma = sum(chances[0 : j+1])
+                if(x <= suma):
+                    point = (x_transform[j][0] * point[0] + x_transform[j][1] * point[1] + x_transform[j][2],
+                            y_transform[j][0] * point[0] + y_transform[j][1] * point[1] + y_transform[j][2])
+                    points.append(point)
+                    break
+        
+        return points
+    except(ValueError, OverflowError):
         return []
-
-    points = []
-
-    point = (random.uniform(0, 1), random.uniform(0, 1))
-
-    for i in range(iterations):
-        x = random.uniform(0, 100)
-        for j in range(0, len(chances)):
-            suma = sum(chances[0 : j+1])
-            if(x <= suma):
-                point = (x_transform[j][0] * point[0] + x_transform[j][1] * point[1] + x_transform[j][2],
-                         y_transform[j][0] * point[0] + y_transform[j][1] * point[1] + y_transform[j][2])
-                points.append(point)
-                break
     
-    return points
