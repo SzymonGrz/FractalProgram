@@ -3,16 +3,18 @@ from tkinter import ttk
 from matplotlib.figure import Figure 
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,  
 NavigationToolbar2Tk) 
+from PIL import Image
+from PIL import ImageTk
+import cv2
+import numpy as np
 
 import fractals
 
 class App(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
-        self.geometry("1000x600")
-        # self.grid_columnconfigure(0, weight=1)
-        # self.grid_rowconfigure(0, weight=1)
-        #self.resizable(0, 0)
+        self.geometry("1366x768")
+        self.state('zoomed')
         self._frame = None
         self.switch_frame(StartFrame)
 
@@ -23,8 +25,7 @@ class App(tk.Tk):
             self._frame.destroy()
         self._frame = new_frame
         self._frame
-        self._frame.place(relx=.5, rely=.5, anchor="c", width = 1000, height = 600)
-        # self._frame.grid(column=0, row=0, sticky="nsew")
+        self._frame.place(relx=0, rely=0, anchor="nw", width = 1366, height = 768)
 
 class StartFrame(tk.Frame):
     def __init__(self, parent):
@@ -34,11 +35,13 @@ class StartFrame(tk.Frame):
         button2 = tk.Button(self, text = "Własny fraktal", command= lambda: parent.switch_frame(FractalFrame))
         button3 = tk.Button(self, text = "Temp Affine Fractal", command= lambda: parent.switch_frame(AffineFractalFrame))
         button4 = tk.Button(self, text = "Instrukcja", command= lambda : parent.switch_frame(TutorialFrame))
+        button5 = tk.Button(self, text = "Biblioteka", command=lambda : parent.switch_frame(LibraryFrame))
 
         button1.place(x = 10, y = 10)
         button2.place(x = 10, y = 60)
         button3.place(x = 10, y = 110)
         button4.place(x = 10, y = 160)
+        button5.place(x = 10, y = 210)
 
 class FernFrame(tk.Frame):
     def __init__(self, parent):
@@ -292,7 +295,7 @@ class AffineFractalFrame(tk.Frame):
         scrollbar = tk.Scrollbar(self, command=list_canvas.yview)
         list_canvas.configure(yscrollcommand=scrollbar.set)
        
-        fig = Figure(figsize = (7, 5), dpi = 100)
+        fig = Figure(figsize = (11, 6.5), dpi = 100)
         plot1 = fig.add_subplot(111)
         canvas_frame = tk.Frame(self)
         canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
@@ -448,9 +451,7 @@ class AffineFractalFrame(tk.Frame):
             self.__updateLabel(label)
         self.__last_iterations_number = int(file.readline())
         iterEntry.insert(0, str(self.__last_iterations_number))
-
-
-        
+    
 class TutorialFrame(tk.Frame):
      def __init__(self, parent):
         tk.Frame.__init__(self, parent)
@@ -472,27 +473,116 @@ class TutorialFrame(tk.Frame):
         mandelbrot_tutorial_button.place(x = 10, y = 260)
         julia_tutorial_button.place(x = 10, y = 290)
 
-# class SaveLoadConfigWindow(tk.Tk):
+class LibraryFrame(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
+
+        button = tk.Button(self, text="Powrót",
+                           command=lambda: parent.switch_frame(StartFrame))
+        
+
+        fig = Figure(figsize = (5, 5), dpi = 100)
+        plot1 = fig.add_subplot(111)
+        canvas_frame = tk.Frame(self)
+        canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
+        toolbar = NavigationToolbar2Tk(canvas, canvas_frame)
+
+        fractalList = tk.Listbox(self, selectmode='single')
+
+        
+        imageLabel = tk.Label(self)
+
+        list = ["Trójkąt Sierpińskiego","Dywan Sierpińskiego", "Paproć Barnsley'a", "Zbiór Mandelbrota", 
+                "Fraktal Viscek'a", "Krzywa Koch'a", "Smok Heighway'a", "Krzywa Levy'ego"]
+        for i in range(len(list)):
+            fractalList.insert(i, list[i])
+        fractalList.bind('<<ListboxSelect>>', lambda event:  self.__onSelect(event, plot1, canvas, imageLabel))
+
+        button.place(x=10, y = 10)
+        fractalList.place(x = 10, y = 60)
+
+        imageLabel.place( x = 800, y = 10)
+
+        canvas_frame.place(x = 300, y = 10)
+        canvas.get_tk_widget().pack()
+        toolbar.update()
+        canvas.get_tk_widget().pack()
+
+    def __onSelect(self, event : tk.Event, plot1, canvas, imgLabel : tk.Label):
+        w = event.widget
+        index = w.curselection()[0]
+        value = w.get(index)
+
+        points = []
+
+        if(index == 0):
+            points = fractals.chaos_game_fractal(100000, 0.5, [(0, 0), (10, 0), (5, 8.65)])
+            plot1.figure.set_size_inches(5, 5, True)
+        elif(index == 1):
+            points = fractals.chaos_game_fractal(100000, (2/3), 
+                [(0, 0), (12, 0), (12, 12), (0, 12), (0, 6), (6, 0), (12, 6), (6, 12)])
+            plot1.figure.set_size_inches(5, 5, True)
+        elif(index == 2):
+            points = fractals.barnsley_fern(100000)
+            plot1.figure.set_size_inches(5, 5, True)
+        elif(index == 3):
+            pass
+            plot(plot1, canvas)
+            points = fractals.mandelbrot_c(500, 500, 255)
+            image = ImageTk.PhotoImage(image=Image.fromarray(points))
+            imgLabel.config(image=image)
+            imgLabel.image = image
+            return
+            
+        elif(index == 4):
+            points = fractals.chaos_game_fractal(100000, 0.667,
+                     [(0, 0),(12, 0), (12, 12), (0, 12), (6, 6)])
+            plot1.figure.set_size_inches(5, 5, True)
+        elif(index == 5):
+            x, y, z = self.__loadFromFile('./fractals/ifs/koch.ifs')
+            points = fractals.affine_fractal(100000, x, y, z)
+            plot1.figure.set_size_inches(5, 5, True)
+        elif(index == 6):
+            x, y, z = self.__loadFromFile('./fractals/ifs/dragon.ifs')
+            points = fractals.affine_fractal(100000, x, y, z)
+            plot1.figure.set_size_inches(5, 5, True)
+        elif(index == 7):
+            x, y, z = self.__loadFromFile('./fractals/ifs/c.ifs')
+            points = fractals.affine_fractal(100000, x, y, z)
+            plot1.figure.set_size_inches(5, 5, True)
+
+        plot(plot1, canvas, points = points)
+        img = fractals.draw_image(points)
+        image = ImageTk.PhotoImage(image=Image.fromarray(img))
+        imgLabel.config(image=image)
+        imgLabel.image = image
+
+    def __loadFromFile(self, filename : str):
+        chances = []
+        x_transform = []
+        y_transform = []
+
+        file = open(filename)
+        if(file == None):
+            return
+        count = int(file.readline())
+        for i in range(count):
+            chances.append(float(file.readline()))
+            line = file.readline()
+            x_transform.append([float(item) for item in line[1:-2].split(", ")])
+            line = file.readline()
+            y_transform.append([float(item) for item in line[1:-2].split(", ")])
+        
+        return (chances, x_transform, y_transform)
+        
 
 
 def plot(plot1, canvas, points : list = None, vertices : list = None):
 
-    # if(points != None and len(points) == 0):
-    #     plot1.clear()
-    #     canvas.draw()
-    #     return
-    #points
-    # points_x = []
-    # points_y = []
-
-    # for p in points:
-    #     points_x.append(p[0])
-    #     points_y.append(p[1])
-
     plot1.clear()
-    if(vertices != None):
+    if(vertices != None and len(vertices) != 0):
         plot1.scatter(*zip(*vertices), c="b")
-    if(points != None):
+    if(points != None and len(points) != 0):
         plot1.scatter(*zip(*points), s=0.09, c="g")
     canvas.draw()
 

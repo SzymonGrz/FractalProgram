@@ -1,4 +1,6 @@
 import random
+import ctypes
+import numpy as np
 
 def point_distance(a, p, distance: float):
     return (a[0] + (p[0] - a[0]) * (distance), a[1] + (p[1] - a[1])*(distance))
@@ -86,7 +88,7 @@ def affine_fractal(iterations, chances : list, x_transform : list, y_transform :
         point = (0, 0) #(random.uniform(0, 1), random.uniform(0, 1))
 
         for i in range(iterations):
-            x = random.uniform(0, 100)
+            x = random.uniform(0, sum(chances))
             for j in range(0, len(chances)):
                 suma = sum(chances[0 : j+1])
                 if(x <= suma):
@@ -99,3 +101,46 @@ def affine_fractal(iterations, chances : list, x_transform : list, y_transform :
     except(ValueError, OverflowError):
         return []
     
+def mandelbrot_c(width, height, iterations):
+
+    lib = ctypes.CDLL('./mandelbrot.dll')
+
+    lib.mandelbrot_set.argtypes= [
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_int)
+    ]
+
+    output = np.zeros((width*height), dtype=np.int32)
+    lib.mandelbrot_set(width, height, iterations, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+    n3 = output.reshape((height, width))
+
+    return n3
+
+def draw_image(points : list) :
+
+    points = np.array(points)
+
+    image_height = 499
+    image_width = 499
+    image = np.zeros((500, 500), dtype=np.uint8)
+
+    x_min, x_max = points[:, 0].min(), points[:, 0].max()
+    y_min, y_max = points[:, 1].min(), points[:, 1].max()
+    
+    scale_x = image_width / (x_max - x_min)
+    scale_y = image_height / (y_max - y_min)
+
+    points[:, 0] = (points[:, 0] - x_min) * scale_x
+    points[:, 1] = (points[:, 1] - y_min) * scale_y
+
+    # Zamiana koordynatów zmiennoprzecinkowych na całkowite i odwrócenie osi Y
+    points = np.round(points).astype(int)
+    points[:, 1] = image_height - 1 - points[:, 1]
+
+    # Zabezpieczenie przed przekroczeniem indeksów i rysowanie punktów
+    valid_points = (points[:, 0] >= 0) & (points[:, 0] < image_width) & \
+               (points[:, 1] >= 0) & (points[:, 1] < image_height)
+    points = points[valid_points]
+
+    image[points[:, 1], points[:, 0]] = 255
+
+    return image

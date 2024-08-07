@@ -9,34 +9,29 @@ from PIL import Image
 import ctypes
 # from numba import jit
 import time
+import cv2
 
-def mandelbrot_c():
+def mandelbrot_c(width, height, iterations):
 
-    lib = ctypes.CDLL('D:/Github/FractalProgram/mandelbrot.dll')
+    lib = ctypes.CDLL('./mandelbrot.dll')
 
     lib.mandelbrot_set.argtypes= [
         ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_int)
     ]
 
-    width = 5000
-    height = 5000
-
     output = np.zeros((width*height), dtype=np.int32)
-    lib.mandelbrot_set(width, height, 255, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+    lib.mandelbrot_set(width, height, iterations, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
     n3 = output.reshape((height, width))
 
     return n3
     # plt.imshow(n3.T, extent=[-2, 1, -1.5, 1.5])
     # plt.show()
 
-def julia_c(c):
-    lib = ctypes.CDLL('D:/Github/FractalProgram/mandelbrot.dll')
+def julia_c(c, width, height):
+    lib = ctypes.CDLL('./mandelbrot.dll')
 
     lib.julia_set.argtypes = [ ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float,
             ctypes.POINTER(ctypes.c_int)]
-    
-    width = 5000
-    height = 5000
 
     output = np.zeros((width*height), dtype=np.int32)
     lib.julia_set(width, height, 255, c.real, c.imag, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
@@ -436,7 +431,7 @@ def chaos_game_fractal_restricted(iterations : int, jump : float, points: list, 
 
     #TODO poprawić. Zamienić x i new_x na punkty
     if(condition == 1):
-        points = restricted_fractal(iterations, jump, points, lambda point_a, point_b : point_a == point_b)
+        points = restricted_fractal(iterations, jump, points, lambda x, new_x : x == new_x)
     elif(condition == 2):
         points = restricted_fractal(iterations, jump, points, lambda x, new_x : (new_x - x == -1) or (new_x == 3 and x == 0))
     elif(condition == 3):
@@ -470,7 +465,7 @@ def restricted_fractal(iterations : int, jump : float, points: list, condition):
 
     for i in range(iterations):
         new_x = random.randint(0, number_of_vertices-1)
-        if(condition(points[x], points[new_x])):
+        if(condition(x, new_x)):
             continue
         else:
             x = new_x
@@ -531,17 +526,37 @@ def fractal(iterations, chances : list, x_transform : list, y_transform : list) 
                 points.append(point)
                 break
 
-    points_x = []
-    points_y = []
+    return points 
 
-    for p in points:
-        points_x.append(p[0])
-        points_y.append(p[1])
+def draw_image(points : list) :
 
-    plt.scatter(points_x, points_y, s = 0.5)
-    plt.show()
+    points = np.array(points)
 
+    image_height = 500
+    image_width = 500
+    image = np.zeros((600, 600), dtype=np.uint8)
+
+    x_min, x_max = points[:, 0].min(), points[:, 0].max()
+    y_min, y_max = points[:, 1].min(), points[:, 1].max()
     
+    scale_x = image_width / (x_max - x_min)
+    scale_y = image_height / (y_max - y_min)
+
+    points[:, 0] = (points[:, 0] - x_min) * scale_x
+    points[:, 1] = (points[:, 1] - y_min) * scale_y
+
+    # Zamiana koordynatów zmiennoprzecinkowych na całkowite i odwrócenie osi Y
+    points = np.round(points).astype(int)
+    points[:, 1] = image_height - 1 - points[:, 1]
+
+    # Zabezpieczenie przed przekroczeniem indeksów i rysowanie punktów
+    valid_points = (points[:, 0] >= 0) & (points[:, 0] < image_width) & \
+               (points[:, 1] >= 0) & (points[:, 1] < image_height)
+    points = points[valid_points]
+
+    image[points[:, 1], points[:, 0]] = 255
+
+    return image
 
 def main():
     print("main")
@@ -654,19 +669,41 @@ def main():
     #mandelbrot_c()
 
     # c = -0.75 + 0.11j
+    # c = 0.285 + 0.01j
+    # c = c = -0.5251993 - 0.5251993j
+    # c = 0.35 + 0.35j
+    # c = 0.4 + 0.4j
+    # c = 0.37 + 0.1j
+    # c = 0.355 + 0.355j
+    # c = 0 + 0.8j
+
+   
+    # # x = julia_c(c = 0 + 0.8j, height = 10000, width = 10000)
+    # # x = mandelbrot_c(width = 10000, height = 10000)
 
 
-    start_time = time.time()
-    x = julia_c(c = 0.285 + 0.01j)
-    # x = mandelbrot_c()
-    end_time = time.time()
-    print(f"Czas wykonania: {end_time - start_time : .4f} s")
 
-    plt.imshow(x.T, extent=[-2, 1, -1.5, 1.5])
-    plt.show()
 
     
 
+    # plt.show()
 
+    # # plt.imshow(x.T, extent=[-2, 1, -1.5, 1.5], cmap=cm.gnuplot2)
+    # # plt.savefig('julia.png', dpi=1000)
+    # plt.show()
+
+    start_time = time.time()
+    points = fractal(100000, chances = [78.747, 21.253], x_transform = [[0.824, 0.281, -0.1],[0.088, 0.281, 0.534]],
+            y_transform=[[-0.212, 0.864, 0.095],[-0.464, -0.378, 1.041]])
+    image = draw_image(points)
+
+    # Wyświetlamy obraz
+    cv2.imshow('Image with Points', image)
+    end_time = time.time()
+    print(f"Czas wykonania: {end_time - start_time : .4f} s")
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    
 if __name__ == '__main__':
     main()
