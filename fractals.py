@@ -115,6 +115,18 @@ def mandelbrot_c(width, height, iterations):
 
     return n3
 
+def julia_c(c, width, height, iterations):
+    lib = ctypes.CDLL('./mandelbrot.dll')
+
+    lib.julia_set.argtypes = [ ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float,
+            ctypes.POINTER(ctypes.c_int)]
+
+    output = np.zeros((width*height), dtype=np.int32)
+    lib.julia_set(width, height, iterations, c.real, c.imag, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+    n3 = output.reshape((height, width))
+    
+    return n3
+
 def draw_image(points : list) :
 
     points = np.array(points)
