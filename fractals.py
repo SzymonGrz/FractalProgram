@@ -144,11 +144,9 @@ def draw_image(points : list) :
     points[:, 0] = (points[:, 0] - x_min) * scale_x
     points[:, 1] = (points[:, 1] - y_min) * scale_y
 
-    # Zamiana koordynatów zmiennoprzecinkowych na całkowite i odwrócenie osi Y
     points = np.round(points).astype(int)
     points[:, 1] = image_height - 1 - points[:, 1]
 
-    # Zabezpieczenie przed przekroczeniem indeksów i rysowanie punktów
     valid_points = (points[:, 0] >= 0) & (points[:, 0] < image_width) & \
                (points[:, 1] >= 0) & (points[:, 1] < image_height)
     points = points[valid_points]
@@ -156,3 +154,4 @@ def draw_image(points : list) :
     image[points[:, 1], points[:, 0]] = 255
 
     return image
+

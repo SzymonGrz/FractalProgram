@@ -7,7 +7,6 @@ from matplotlib.figure import Figure
 import math
 from PIL import Image
 import ctypes
-# from numba import jit
 import time
 import cv2
 
@@ -440,15 +439,25 @@ def chaos_game_fractal_restricted(iterations : int, jump : float, points: list, 
         
     return points
 
-    # points_x = []
-    # points_y = []
+#################################################################
 
-    # for p in points:
-    #     points_x.append(p[0])
-    #     points_y.append(p[1])
+def center_of_mass(vertices):
+    cx = sum(x for x, y in vertices) / len(vertices)
+    cy = sum(y for x, y in vertices) / len(vertices)
+    return cx, cy
 
-    # plt.scatter(points_x, points_y, s=0.5, )
-    # plt.show()
+# Funkcja obliczająca kąt dla każdego wierzchołka względem punktu odniesienia
+def angle_from_center(vertex, center):
+    x, y = vertex
+    cx, cy = center
+    return math.atan2(y - cy, x - cx)
+
+# Funkcja sortująca wierzchołki wielokąta
+def sort_vertices(vertices):
+    center = center_of_mass(vertices)  # Oblicz środek masy
+    return sorted(vertices, key=lambda v: angle_from_center(v, center))
+
+###########################################################
 
 def restricted_fractal(iterations : int, jump : float, points: list, condition):
     
@@ -457,6 +466,7 @@ def restricted_fractal(iterations : int, jump : float, points: list, condition):
     
     number_of_vertices = len(points)
 
+    points = sort_vertices(points)
 
     # was_the_same : bool = False
 
@@ -595,7 +605,7 @@ def main():
     #fraktal Viscek'a
     #chaos_game_fractal(1000000, (2/3), [(0, 0),(12, 0), (12, 12), (0, 12), (6, 6)])
 
-    #chaos_game_fractal_restricted(1000000, 0.5, [(0, 0), (10, 0), (10, 10), (0, 10)], 3)
+    
     
     # restricted_fractal(1000000, 0.5, [(0, 0), (10, 0), (10, 10), (0, 10)], 
     #                 lambda x, new_x : (new_x - x == 2) or (new_x - x == -2) or (new_x == 3 and x == 1))
@@ -692,17 +702,21 @@ def main():
     # # plt.savefig('julia.png', dpi=1000)
     # plt.show()
 
-    start_time = time.time()
-    points = fractal(100000, chances = [78.747, 21.253], x_transform = [[0.824, 0.281, -0.1],[0.088, 0.281, 0.534]],
-            y_transform=[[-0.212, 0.864, 0.095],[-0.464, -0.378, 1.041]])
-    image = draw_image(points)
+    # start_time = time.time()
+    # points = fractal(100000, chances = [78.747, 21.253], x_transform = [[0.824, 0.281, -0.1],[0.088, 0.281, 0.534]],
+    #         y_transform=[[-0.212, 0.864, 0.095],[-0.464, -0.378, 1.041]])
+    # image = draw_image(points)
 
-    # Wyświetlamy obraz
-    cv2.imshow('Image with Points', image)
-    end_time = time.time()
-    print(f"Czas wykonania: {end_time - start_time : .4f} s")
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # # Wyświetlamy obraz
+    # cv2.imshow('Image with Points', image)
+    # end_time = time.time()
+    # print(f"Czas wykonania: {end_time - start_time : .4f} s")
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    points = chaos_game_fractal_restricted(100000, 0.5, [(0, 0), (10, 0), (0, 10), (10, 10)], 3)
+    plt.scatter(*zip(*points), s=0.09, c="g")
+    plt.show()
 
     
 if __name__ == '__main__':
