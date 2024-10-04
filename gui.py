@@ -8,6 +8,9 @@ from PIL import ImageTk
 import cv2
 import numpy as np
 from scipy import ndimage
+import turtle
+from collections import deque
+import time
 
 import fractals
 
@@ -32,53 +35,55 @@ class StartFrame(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
-        button1 = tk.Button(self, text = "Paproć Barnsley'a", command= lambda: parent.switch_frame(FernFrame))
+        # button1 = tk.Button(self, text = "Paproć Barnsley'a", command= lambda: parent.switch_frame(FernFrame))
         button6 = tk.Button(self, text = "Zbiór Mandelbrota i Zbiory Julii", command= lambda: parent.switch_frame(MandelJuliaFrame))
         button2 = tk.Button(self, text = "Gra w chaos", command= lambda: parent.switch_frame(FractalFrame))
         button3 = tk.Button(self, text = "IFS - System Funkcji Iterowanych", command= lambda: parent.switch_frame(AffineFractalFrame))
+        button7 = tk.Button(self, text = "L-System", command = lambda : parent.switch_frame(LSystemFrame))
         button4 = tk.Button(self, text = "Instrukcja", command= lambda : parent.switch_frame(TutorialFrame))
         button5 = tk.Button(self, text = "Biblioteka", command=lambda : parent.switch_frame(LibraryFrame))
 
-        button1.place(x = 10, y = 10)
-        button6.place(x = 10, y = 60)
-        button2.place(x = 10, y = 110)
-        button3.place(x = 10, y = 160)
+        # button1.place(x = 10, y = 10)
+        button6.place(x = 10, y = 10)
+        button2.place(x = 10, y = 60)
+        button3.place(x = 10, y = 110)
+        button7.place(x = 10, y=  160)
         button4.place(x = 10, y = 210)
         button5.place(x = 10, y = 260)
 
-class FernFrame(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-        button = tk.Button(self, text="Powrót",
-                           command=lambda: parent.switch_frame(StartFrame))
-        button.place(x = 10, y = 20)
-        tk.Label(self, text='Iteracje').place(x = 10, y = 60)
-        vcmd = (self.register(self.__validate))
+# class FernFrame(tk.Frame):
+    # def __init__(self, parent):
+    #     tk.Frame.__init__(self, parent)
+    #     button = tk.Button(self, text="Powrót",
+    #                        command=lambda: parent.switch_frame(StartFrame))
+    #     button.place(x = 10, y = 20)
+    #     tk.Label(self, text='Iteracje').place(x = 10, y = 60)
+    #     vcmd = (self.register(self.__validate))
 
-        iterationsEntry = tk.Entry(self, validate="all", validatecommand=(vcmd, "%P"))
-        iterationsEntry.place(x = 10, y = 90)
+    #     iterationsEntry = tk.Entry(self, validate="all", validatecommand=(vcmd, "%P"))
+    #     iterationsEntry.place(x = 10, y = 90)
 
-        draw_button = tk.Button(self, text="Rysuj", 
-                                command=lambda: plot(plot1, canvas,
-                                fractals.barnsley_fern(int(iterationsEntry.get()))))
-        draw_button.place(x = 10, y = 120)
-        fig = Figure(figsize = (5, 5), dpi = 100)
-        plot1 = fig.add_subplot(111)
-        canvas_frame = tk.Frame(self)
-        canvas_frame.place(x = 200, y = 0)
-        canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
-        canvas.get_tk_widget().pack()
-        toolbar = NavigationToolbar2Tk(canvas, canvas_frame) 
-        toolbar.update()
-        canvas.get_tk_widget().pack()
-        tk.Label(self, text="           ").grid(row = 0, column = 3, sticky="W")
+    #     draw_button = tk.Button(self, text="Rysuj", 
+    #                             command=lambda: plot(plot1, canvas,
+    #                             fractals.barnsley_fern(int(iterationsEntry.get()))))
+    #     draw_button.place(x = 10, y = 120)
+    #     fig = Figure(figsize = (5, 5), dpi = 100)
+    #     plot1 = fig.add_subplot(111)
+    #     canvas_frame = tk.Frame(self)
+    #     canvas_frame.place(x = 200, y = 0)
+    #     canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
+    #     canvas.get_tk_widget().pack()
+    #     toolbar = NavigationToolbar2Tk(canvas, canvas_frame) 
+    #     toolbar.update()
+    #     canvas.get_tk_widget().pack()
+    #     tk.Label(self, text="           ").grid(row = 0, column = 3, sticky="W")
         
 
-    def __validate(self, P):
-        if str.isdigit(P) or P == "":
-            return True
-        else:
-            return False
+    # def __validate(self, P):
+    #     if str.isdigit(P) or P == "":
+    #         return True
+    #     else:
+    #         return False
 
 class FractalFrame(tk.Frame):
 
@@ -475,14 +480,19 @@ class MandelJuliaFrame(tk.Frame) :
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
+        self.__xmin = -2.0
+        self.__xmax = 2.0
+        self.__ymin = -2.0
+        self.__ymax = 2.0
+
         imageLabel = tk.Label(self)
 
         button = tk.Button(self, text="Powrót",
                            command=lambda: parent.switch_frame(StartFrame))
         
         draw_button = tk.Button(self, text = "Rysuj", 
-            command = lambda : self.__plotFractal(plot1, canvas, imageLabel, 
-                    c_real_entry.get(), c_imag_entry.get(), plot_choice.get()))
+            command = lambda : [self.__setLimits(plot_choice.get()) ,self.__plotFractal(plot1, canvas, imageLabel, 
+                    c_real_entry.get(), c_imag_entry.get(), plot_choice.get())])
         clear_button = tk.Button(self, text = "Wyczyść", 
             command = lambda : self.__clearPlot(plot1, canvas, imageLabel))
         
@@ -498,6 +508,8 @@ class MandelJuliaFrame(tk.Frame) :
 
         fig = Figure(figsize = (5, 5), dpi = 100)
         plot1 = fig.add_subplot(111)
+        plot1.set_xlim(self.__xmin, self.__xmax)
+        plot1.set_ylim(self.__ymin, self.__ymax)
         canvas_frame = tk.Frame(self)
         canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
         toolbar = NavigationToolbar2Tk(canvas, canvas_frame) 
@@ -517,21 +529,39 @@ class MandelJuliaFrame(tk.Frame) :
         canvas.get_tk_widget().pack()
         imageLabel.place(x = 800, y = 10)
 
+        def callback_wrapper(event = None):
+            xlim = plot1.get_xlim()
+            ylim = plot1.get_ylim()
+            plot1.set_xlim(xlim)
+
+            self.__xmin, self.__xmax = xlim 
+            self.__ymin, self.__ymax = ylim
+            self.__plotFractal(plot1, canvas, imageLabel, c_real_entry.get(), c_imag_entry.get(),
+                                               plot_choice.get())
+
+        fig.canvas.mpl_connect('button_release_event', callback_wrapper)
+
+
+
+
+        
+
     def __plotFractal(self, plot1, canvas, imageLabel : tk.Label, c_real_string : str, c_imag_string : str, plot_choice):
 
         if(plot_choice == 0):
-            points = fractals.mandelbrot_c(1000, 1000, 255)
+            points = fractals.mandelbrot_c(1000, 1000, 255, self.__xmin, self.__xmax, self.__ymin, self.__ymax)
         else:
             try:
                 c_real = float(c_real_string)
                 c_imag = float(c_imag_string)
             except(ValueError):
                 return
-            points = fractals.julia_c(c_real + c_imag *1j, 1000, 1000, 255)
+            points = fractals.julia_c(c_real + c_imag *1j, 1000, 1000, 255, self.__xmin, self.__xmax, self.__ymin, self.__ymax)
 
         normalized_points = cv2.normalize(points, None, 0, 255, cv2.NORM_MINMAX)
         normalized_points = np.uint8(normalized_points)
         colored_points = cv2.applyColorMap(normalized_points, cv2.COLORMAP_HOT)
+        colored_points = cv2.flip(colored_points, 0)
 
         image = Image.fromarray(colored_points)
         res_image = image.resize((500, 500))
@@ -539,9 +569,10 @@ class MandelJuliaFrame(tk.Frame) :
         imageLabel.config(image = image)
         imageLabel.image = image
 
+
         points = ndimage.rotate(points, 90)
         plot1.clear()
-        plot1.imshow(np.fliplr(points.T))
+        plot1.imshow(np.flipud(np.fliplr(points.T)), extent=(self.__xmin, self.__xmax, self.__ymin, self.__ymax))
         canvas.draw()
         
         
@@ -554,6 +585,26 @@ class MandelJuliaFrame(tk.Frame) :
     def __saveImageToFile(self, imageLabel: tk.Label):
         image = imageLabel.image
         saveImageToFile(image)
+
+    def __setLimits(self, choice):
+        if(choice == 0):
+            self.__xmin = -2.0
+            self.__xmax = 1.0
+            self.__ymin = -1.5
+            self.__ymax = 1.5
+        else:
+            self.__xmin = -2.0
+            self.__xmax = 2.0
+            self.__ymin = -2.0
+            self.__ymax = 2.0
+
+    # def __zoom_callback(self, plot1):
+   
+    #     xlim = plot1.get_xlim()
+    #     ylim = plot1.get_ylim()
+
+    #     self.__xmin, self.__xmax = xlim 
+    #     self.__ymin, self.__ymax = ylim
 
 class TutorialFrame(tk.Frame):
      def __init__(self, parent):
@@ -697,7 +748,167 @@ class LibraryFrame(tk.Frame):
     #         y_transform.append([float(item) for item in line[1:-2].split(", ")])
         
     #     return (chances, x_transform, y_transform)
+
+class LSystemFrame(tk.Frame):
+    def __init__(self, parent):
+
+        self.__rules = []
+        self.__turtle_x: float = 0
+        self.__turtle_y: float = 0
+        self.__turtle_heading : float = 90
+        self.__turtle_running = False
+
+        tk.Frame.__init__(self, parent)
+
+        button = tk.Button(self, text="Powrót",
+                           command=lambda: parent.switch_frame(StartFrame))
         
+        turtle_canvas = tk.Canvas(self, width = 1000, height = 650)
+        self.__screen = turtle.TurtleScreen(turtle_canvas)
+        self.__turtle = turtle.RawTurtle(self.__screen)
+        self.__turtle.speed(0)
+        self.__screen.delay(0)
+        self.__screen.cv.bind('<Button-1>', self.__onLeftClick)
+        self.__screen.cv.bind('<Button-3>', self.__onRightClick)
+
+        variable_entry = tk.Entry(self, width = 10)
+        rule_entry  = tk.Entry(self, width = 30)
+        add_rule_button = tk.Button(self, text = "Dodaj", 
+                        command=lambda : self.__addRule(variable_entry.get(), rule_entry.get()))
+        clear_rules_button = tk.Button(self, text = "Wyczyść", command=self.__clearRules)
+        start_entry = tk.Entry(self, width = 10)
+        angle_entry = tk.Entry(self, width = 10)
+        iter_entry = tk.Entry(self, width = 10)
+        length_slider = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL)
+        self.draw_button = tk.Button(self, text = "Rysuj", 
+                        command = lambda: self.__drawTurtle(self.__rules, start_entry.get(), 
+                                                angle_entry.get(), length_slider.get(), iter_entry.get()))
+        self.stop_button = tk.Button(self, text = "Stop", command= self.__stopTurtle)
+        self.clear_button = tk.Button(self, text = "Wyczyść", command=self.__clearScreen)
+
+        turtle_canvas.place(x = 300, y = 10)
+        button.place(x=10, y = 10)
+        tk.Label(self, text = "Dodaj regułę").place(x = 10, y = 50)
+        tk.Label(self, text = "Zmienna").place(x = 10, y = 80)
+        tk.Label(self, text = "Reguła").place(x = 80, y = 80)
+        variable_entry.place(x = 10, y = 120)
+        rule_entry.place(x = 80, y = 120)
+        add_rule_button.place(x = 10, y = 160)
+        clear_rules_button.place(x = 80, y = 160)
+        tk.Label(self, text = "Start").place(x = 10, y = 200)
+        start_entry.place(x = 10, y = 240)
+        tk.Label(self, text = "Kąt").place(x = 80, y = 200)
+        angle_entry.place(x = 80, y = 240)
+        tk.Label(self, text = "Iteracje").place(x = 150, y = 200)
+        iter_entry.place(x = 150, y = 240)
+        tk.Label(self, text = "Długość odcinka").place(x = 10, y = 280)
+        length_slider.place(x = 10, y = 300)
+        self.draw_button.place(x = 10, y = 360)
+        self.stop_button.place(x = 80, y = 360)
+        self.clear_button.place(x = 150, y = 360)
+
+    def __addRule(self, variable: str, rule: str):
+
+        if len(variable) > 1:
+            return
+        
+        self.__rules.append((variable, rule))
+
+    def __drawTurtle(self, rules, axiom, angle_str, length, iterations):
+        
+        if len(axiom) < 1: 
+            return
+        try:
+            angle = float(angle_str)
+            iter = int(iterations)
+        except:
+            return
+
+        # canvas = self.__turtle.getscreen()
+
+        self.draw_button.configure(state="disabled")
+        self.__screen.cv.unbind("<Button-1>")
+        self.__screen.cv.unbind('<Button-3>')
+
+        route = fractals.l_system_fractal(axiom, rules, iter)
+
+        turtle_stack = deque()
+        angle_stack  = deque()
+
+        forward = length
+
+        # canvas.clear()
+        self.__screen.reset()
+        self.__turtle.penup()
+        self.__turtle.setpos(self.__turtle_x, self.__turtle_y)
+        self.__turtle.seth(self.__turtle_heading)
+        self.__turtle.pendown()
+        self.__turtle.ht()
+
+        self.__turtle_running = True
+
+        for i in route:
+            if(self.__turtle_running == False):
+                break
+            if i == 'F' : 
+                self.__turtle.forward(forward)
+            elif i == 'G':
+                self.__turtle.forward(forward)
+            elif i =='f':
+                self.__turtle.penup()
+                self.__turtle.forward(forward)
+                self.__turtle.pendown()
+            elif i == '+':
+                self.__turtle.right(angle)
+            elif i =='-':
+                self.__turtle.left(angle)
+            elif i == '[':
+                turtle_stack.append(self.__turtle.pos())
+                angle_stack.append(self.__turtle.heading())
+            elif i == ']':
+                new_pos = turtle_stack.pop()
+                self.__turtle.penup()
+                self.__turtle.setpos(new_pos)
+                self.__turtle.seth(angle_stack.pop())
+                self.__turtle.pendown()
+            else:
+                pass
+        
+        self.draw_button.configure(state="normal")
+        self.__screen.cv.bind("<Button-1>", self.__onLeftClick)
+        self.__screen.cv.bind('<Button-3>', self.__onRightClick)
+        self.__turtle.st()
+        self.__turtle_running = False
+
+    def __clearScreen(self):
+        self.__turtle_running = False
+        self.__screen.reset()
+        self.__turtle.penup()
+        self.__turtle.setpos(self.__turtle_x, self.__turtle_y)
+        self.__turtle.seth(self.__turtle_heading)
+        self.__turtle.pendown()
+
+    def __clearRules(self):
+        self.__rules.clear()
+
+    def __stopTurtle(self):
+        self.__turtle_running = False
+
+    def __onLeftClick(self, event):
+        # x, y = self.__turtle.getscreen().getcanvas().winfo_pointerxy()
+        self.__turtle_x, self.__turtle_y = event.x - self.__turtle.getscreen().window_width()/2, -(event.y - self.__turtle.getscreen().window_height()/2)
+        self.__turtle.penup()
+        self.__turtle.setpos(self.__turtle_x, self.__turtle_y)
+        self.__turtle.pendown()  
+
+    def __onRightClick(self, event):
+        x, y =  event.x - self.__turtle.getscreen().window_width()/2, -(event.y - self.__turtle.getscreen().window_height()/2)
+
+        self.__turtle.setheading(self.__turtle.towards(x, y))
+        self.__turtle_heading = self.__turtle.heading()     
+        
+
+
 
 def plot(plot1, canvas, points : list = None, vertices : list = None):
 

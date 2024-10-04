@@ -101,28 +101,31 @@ def affine_fractal(iterations, chances : list, x_transform : list, y_transform :
     except(ValueError, OverflowError):
         return []
     
-def mandelbrot_c(width, height, iterations):
+def mandelbrot_c(width, height, iterations, xmin, xmax, ymin, ymax):
 
     lib = ctypes.CDLL('./mandelbrot.dll')
 
     lib.mandelbrot_set.argtypes= [
-        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_int)
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_int), 
+        ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double
     ]
 
     output = np.zeros((width*height), dtype=np.int32)
-    lib.mandelbrot_set(width, height, iterations, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+    lib.mandelbrot_set(width, height, iterations, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+                       xmin, xmax, ymin, ymax)
     n3 = output.reshape((height, width))
 
     return n3
 
-def julia_c(c, width, height, iterations):
+def julia_c(c, width, height, iterations, xmin, xmax, ymin, ymax):
     lib = ctypes.CDLL('./mandelbrot.dll')
 
     lib.julia_set.argtypes = [ ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float,
-            ctypes.POINTER(ctypes.c_int)]
+            ctypes.POINTER(ctypes.c_int), ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double]
 
     output = np.zeros((width*height), dtype=np.int32)
-    lib.julia_set(width, height, iterations, c.real, c.imag, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+    lib.julia_set(width, height, iterations, c.real, c.imag, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+                   xmin, xmax, ymin, ymax)
     n3 = output.reshape((height, width))
     
     return n3
@@ -154,4 +157,23 @@ def draw_image(points : list) :
     image[points[:, 1], points[:, 0]] = 255
 
     return image
+
+def l_system_fractal(axiom: str, rules: list, iterations: int):
+
+    route = axiom
+    new_route = ""
+    for j in range(iterations):
+    # route = route.replace("f", rule2)
+        l = len(route)
+        for i in range(l):
+            found = [rule[1] for rule in rules if rule[0] == route[i]]
+            if found != []:
+                new_route += found[0]
+            else:
+                new_route += route[i]
+        route = new_route
+        new_route = ""
+
+    return route
+
 
