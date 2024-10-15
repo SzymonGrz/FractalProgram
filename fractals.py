@@ -158,19 +158,17 @@ def draw_image(points : list) :
 
     return image
 
-def l_system_fractal(axiom: str, rules: list, iterations: int):
+def l_system_fractal(axiom: str, rules: dict, iterations: int):
 
     route = axiom
     new_route = ""
     for j in range(iterations):
-    # route = route.replace("f", rule2)
         l = len(route)
-        for i in range(l):
-            found = [rule[1] for rule in rules if rule[0] == route[i]]
-            if found != []:
-                new_route += found[0]
+        for i in route:
+            if i in rules:
+                new_route += rules[i]
             else:
-                new_route += route[i]
+                new_route += i
         route = new_route
         new_route = ""
 

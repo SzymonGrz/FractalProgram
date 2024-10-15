@@ -1,6 +1,8 @@
+from __future__ import division
 import tkinter as tk
 from tkinter import ttk
-from matplotlib.figure import Figure 
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,  
 NavigationToolbar2Tk) 
 from PIL import Image
@@ -10,7 +12,8 @@ import numpy as np
 from scipy import ndimage
 import turtle
 from collections import deque
-import time
+import random
+import math
 
 import fractals
 
@@ -29,11 +32,11 @@ class App(tk.Tk):
             self._frame.destroy()
         self._frame = new_frame
         self._frame
-        self._frame.place(relx=0, rely=0, anchor="nw", width = 1366, height = 768)
+        self._frame.pack()
 
 class StartFrame(tk.Frame):
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent, width = 1366, height = 768)
 
         # button1 = tk.Button(self, text = "Paproć Barnsley'a", command= lambda: parent.switch_frame(FernFrame))
         button6 = tk.Button(self, text = "Zbiór Mandelbrota i Zbiory Julii", command= lambda: parent.switch_frame(MandelJuliaFrame))
@@ -43,6 +46,8 @@ class StartFrame(tk.Frame):
         button4 = tk.Button(self, text = "Instrukcja", command= lambda : parent.switch_frame(TutorialFrame))
         button5 = tk.Button(self, text = "Biblioteka", command=lambda : parent.switch_frame(LibraryFrame))
 
+        button8 = tk.Button(self, text = "Temporary", command= lambda: parent.switch_frame(ChaosGameFrame))
+
         # button1.place(x = 10, y = 10)
         button6.place(x = 10, y = 10)
         button2.place(x = 10, y = 60)
@@ -50,6 +55,8 @@ class StartFrame(tk.Frame):
         button7.place(x = 10, y=  160)
         button4.place(x = 10, y = 210)
         button5.place(x = 10, y = 260)
+
+        button8.place(x = 10, y = 360)
 
 # class FernFrame(tk.Frame):
     # def __init__(self, parent):
@@ -95,7 +102,7 @@ class FractalFrame(tk.Frame):
         self.__last_iterations_number = 0
         self.__last_jump = 0
 
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent, width = 1366, height = 768)
         vcmdInt = (self.register(self.__validate))
         vcmdFloat = (self.register(self.__validateFloat))
 
@@ -275,7 +282,7 @@ class AffineFractalFrame(tk.Frame):
         self.__last_iterations_number = 0
         self.__functionList = tk.StringVar(value = "") 
 
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent, width = 1366, height = 768)
         vcmd = (self.register(self.__validate))
 
         button = tk.Button(self, text="Powrót",
@@ -392,6 +399,8 @@ class AffineFractalFrame(tk.Frame):
             self.__x_transform.pop()
 
         self.__updateLabel(label)
+        
+
 
     def __clearLists(self):
         self.__chances = []
@@ -478,7 +487,7 @@ class AffineFractalFrame(tk.Frame):
 
 class MandelJuliaFrame(tk.Frame) :
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent , width = 1366, height = 768)
 
         self.__xmin = -2.0
         self.__xmax = 2.0
@@ -491,10 +500,10 @@ class MandelJuliaFrame(tk.Frame) :
                            command=lambda: parent.switch_frame(StartFrame))
         
         draw_button = tk.Button(self, text = "Rysuj", 
-            command = lambda : [self.__setLimits(plot_choice.get()) ,self.__plotFractal(plot1, canvas, imageLabel, 
+            command = lambda : [self.__setLimits(plot_choice.get()) ,self.__plotFractal(self.__plot, canvas, imageLabel, 
                     c_real_entry.get(), c_imag_entry.get(), plot_choice.get())])
         clear_button = tk.Button(self, text = "Wyczyść", 
-            command = lambda : self.__clearPlot(plot1, canvas, imageLabel))
+            command = lambda : self.__clearPlot(self.__plot, canvas, imageLabel))
         
         save_image_button =tk.Button(self, text = "Zapisz obraz" , command = lambda : self.__saveImageToFile(imageLabel))
         
@@ -507,9 +516,9 @@ class MandelJuliaFrame(tk.Frame) :
         c_imag_entry = tk.Entry(self, width = 10)
 
         fig = Figure(figsize = (5, 5), dpi = 100)
-        plot1 = fig.add_subplot(111)
-        plot1.set_xlim(self.__xmin, self.__xmax)
-        plot1.set_ylim(self.__ymin, self.__ymax)
+        self.__plot = fig.add_subplot(111)
+        self.__plot.set_xlim(self.__xmin, self.__xmax)
+        self.__plot.set_ylim(self.__ymin, self.__ymax)
         canvas_frame = tk.Frame(self)
         canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
         toolbar = NavigationToolbar2Tk(canvas, canvas_frame) 
@@ -530,21 +539,19 @@ class MandelJuliaFrame(tk.Frame) :
         imageLabel.place(x = 800, y = 10)
 
         def callback_wrapper(event = None):
-            xlim = plot1.get_xlim()
-            ylim = plot1.get_ylim()
-            plot1.set_xlim(xlim)
+            xlim = self.__plot.get_xlim()
+            ylim = self.__plot.get_ylim()
 
             self.__xmin, self.__xmax = xlim 
             self.__ymin, self.__ymax = ylim
-            self.__plotFractal(plot1, canvas, imageLabel, c_real_entry.get(), c_imag_entry.get(),
+            self.__plotFractal(self.__plot, canvas, imageLabel, c_real_entry.get(), c_imag_entry.get(),
                                                plot_choice.get())
+            
 
         fig.canvas.mpl_connect('button_release_event', callback_wrapper)
+        #self.__plot.callbacks.connect('xlim_changed', callback_wrapper)
 
 
-
-
-        
 
     def __plotFractal(self, plot1, canvas, imageLabel : tk.Label, c_real_string : str, c_imag_string : str, plot_choice):
 
@@ -598,17 +605,10 @@ class MandelJuliaFrame(tk.Frame) :
             self.__ymin = -2.0
             self.__ymax = 2.0
 
-    # def __zoom_callback(self, plot1):
-   
-    #     xlim = plot1.get_xlim()
-    #     ylim = plot1.get_ylim()
-
-    #     self.__xmin, self.__xmax = xlim 
-    #     self.__ymin, self.__ymax = ylim
 
 class TutorialFrame(tk.Frame):
      def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent, width = 1366, height = 768)
 
         button = tk.Button(self, text="Powrót",
                            command=lambda: parent.switch_frame(StartFrame))
@@ -629,7 +629,7 @@ class TutorialFrame(tk.Frame):
 
 class LibraryFrame(tk.Frame):
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent, width = 1366, height = 768)
 
         button = tk.Button(self, text="Powrót",
                            command=lambda: parent.switch_frame(StartFrame))
@@ -639,7 +639,6 @@ class LibraryFrame(tk.Frame):
         plot1 = fig.add_subplot(111)
         canvas_frame = tk.Frame(self)
         canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
-        toolbar = NavigationToolbar2Tk(canvas, canvas_frame)
 
         fractalList = tk.Listbox(self, selectmode='single')
 
@@ -659,7 +658,6 @@ class LibraryFrame(tk.Frame):
 
         canvas_frame.place(x = 300, y = 10)
         canvas.get_tk_widget().pack()
-        toolbar.update()
         canvas.get_tk_widget().pack()
 
     def __onSelect(self, event : tk.Event, plot1, canvas, imgLabel : tk.Label):
@@ -707,7 +705,7 @@ class LibraryFrame(tk.Frame):
             plot1.set_ylim(10)
         elif(index == 7):
             plot(plot1, canvas)
-            points = fractals.mandelbrot_c(500, 500, 255)
+            points = fractals.mandelbrot_c(500, 500, 255, -2, 1, -1.5, 1.5)
             plot1.imshow(points.T, aspect='auto')
             canvas.draw()
             image = ImageTk.PhotoImage(image=Image.fromarray(points))
@@ -717,7 +715,7 @@ class LibraryFrame(tk.Frame):
         elif(index == 8):
             plot(plot1, canvas)
             points = fractals.julia_c(c = 0.37 + 0.1j, width = 500, 
-                                height = 500, iterations=255)
+                                height = 500, iterations=255, xmin=-2.0, xmax = 2.0, ymin=-2.0, ymax = 2.0)
             plot1.imshow(points.T, aspect= 'auto')
             canvas.draw()
             image = ImageTk.PhotoImage(image=Image.fromarray(points))
@@ -752,13 +750,13 @@ class LibraryFrame(tk.Frame):
 class LSystemFrame(tk.Frame):
     def __init__(self, parent):
 
-        self.__rules = []
+        self.__rules = {}
         self.__turtle_x: float = 0
         self.__turtle_y: float = 0
         self.__turtle_heading : float = 90
         self.__turtle_running = False
 
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent, width = 1366, height = 768)
 
         button = tk.Button(self, text="Powrót",
                            command=lambda: parent.switch_frame(StartFrame))
@@ -774,8 +772,8 @@ class LSystemFrame(tk.Frame):
         variable_entry = tk.Entry(self, width = 10)
         rule_entry  = tk.Entry(self, width = 30)
         add_rule_button = tk.Button(self, text = "Dodaj", 
-                        command=lambda : self.__addRule(variable_entry.get(), rule_entry.get()))
-        clear_rules_button = tk.Button(self, text = "Wyczyść", command=self.__clearRules)
+                        command=lambda : self.__addRule(variable_entry.get(), rule_entry.get(), rules_label))
+        clear_rules_button = tk.Button(self, text = "Wyczyść", command=lambda: self.__clearRules(rules_label))
         start_entry = tk.Entry(self, width = 10)
         angle_entry = tk.Entry(self, width = 10)
         iter_entry = tk.Entry(self, width = 10)
@@ -785,6 +783,8 @@ class LSystemFrame(tk.Frame):
                                                 angle_entry.get(), length_slider.get(), iter_entry.get()))
         self.stop_button = tk.Button(self, text = "Stop", command= self.__stopTurtle)
         self.clear_button = tk.Button(self, text = "Wyczyść", command=self.__clearScreen)
+
+        rules_label = tk.Label(self, text="", justify="left")
 
         turtle_canvas.place(x = 300, y = 10)
         button.place(x=10, y = 10)
@@ -806,13 +806,18 @@ class LSystemFrame(tk.Frame):
         self.draw_button.place(x = 10, y = 360)
         self.stop_button.place(x = 80, y = 360)
         self.clear_button.place(x = 150, y = 360)
+        rules_label.place(x = 10, y = 400)
 
-    def __addRule(self, variable: str, rule: str):
+    def __addRule(self, variable: str, rule: str, label : tk.Label):
 
         if len(variable) > 1:
             return
-        
-        self.__rules.append((variable, rule))
+
+        if variable in self.__rules:
+            return
+
+        self.__rules[variable] = rule
+        label['text'] += variable + " = " + rule + "\n"
 
     def __drawTurtle(self, rules, axiom, angle_str, length, iterations):
         
@@ -888,8 +893,10 @@ class LSystemFrame(tk.Frame):
         self.__turtle.seth(self.__turtle_heading)
         self.__turtle.pendown()
 
-    def __clearRules(self):
+    def __clearRules(self, label: tk.Label):
         self.__rules.clear()
+        label['text'] = ""
+
 
     def __stopTurtle(self):
         self.__turtle_running = False
@@ -906,13 +913,263 @@ class LSystemFrame(tk.Frame):
 
         self.__turtle.setheading(self.__turtle.towards(x, y))
         self.__turtle_heading = self.__turtle.heading()     
+
+
+class ChaosGameFrame(tk.Frame):
+    def __init__(self, parent):
+
+        tk.Frame.__init__(self, parent, width = 1366, height = 768)
+
+        self.__dot : int = 2
+
+        self.__drag_data = {}
+
+        self.__list_of_rectangles = {}
+
+        button = tk.Button(self, text="Powrót",
+                           command=lambda: parent.switch_frame(StartFrame))
+
+        fig = Figure(figsize = (5, 5), dpi = 100)
+        self.__plot1 = fig.add_subplot(111)
+        self.__plot1.set_xlim(0, 300)
+        self.__plot1.set_ylim(0, 300)
         
+        canvas_frame = tk.Frame(self)
+        self.__canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
+        toolbar = NavigationToolbar2Tk(self.__canvas, canvas_frame)
+
+        self.__draw_canvas = tk.Canvas(self, width = 300, height = 300, bg="white")
+
+        x_entry_1 = tk.Entry(self, width = 10)
+        x_entry_2 = tk.Entry(self, width = 10)
+        x_entry_3 = tk.Entry(self, width = 10)
+
+        y_entry_1 = tk.Entry(self, width = 10)
+        y_entry_2 = tk.Entry(self, width = 10)
+        y_entry_3 = tk.Entry(self, width = 10)
+
+        function_add_button = tk.Button(self, text = "Dodaj" ,command= 
+            lambda: self.__drawFunction(x_entry_1.get(), x_entry_2.get(), x_entry_3.get(),
+            y_entry_1.get(), y_entry_2.get(), y_entry_3.get()))
+        draw_button = tk.Button(self, text = "Rysuj", command=self.__calculatePoints)
+
+        #############################################
+
+        rectangle_add_button = tk.Button(self, text="Prostokąt", command=lambda:
+                                         self.create_rectangle(0, 0, int(self.__draw_canvas["width"])/2, int(self.__draw_canvas["height"])/2))
+        
+        rectangle_add_button.place(x = 10, y = 280)
+
+        ###########################################
+
+        button.place(x = 10, y = 10)
+        draw_button.place(x = 10, y = 60)
+        
+        canvas_frame.place(x = 350, y = 10) 
+        # canvas.get_tk_widget().pack()
+        toolbar.update()
+        self.__canvas.get_tk_widget().pack()
+
+        tk.Label(self, text = "a").place(x = 10, y = 110)
+        tk.Label(self, text = "b").place(x = 80, y = 110)
+        tk.Label(self, text = "e").place(x = 150, y = 110)
+
+        x_entry_1.place(x = 10, y = 135)
+        x_entry_2.place(x = 80, y = 135)
+        x_entry_3.place(x = 150, y = 135)
+
+        tk.Label(self, text = "c").place(x = 10, y = 160)
+        tk.Label(self, text = "d").place(x = 80, y = 160)
+        tk.Label(self, text = "f").place(x = 150, y = 160)
+
+        y_entry_1.place(x = 10, y = 185)
+        y_entry_2.place(x = 80, y = 185)
+        y_entry_3.place(x = 150, y = 185)
+
+        function_add_button.place(x = 10, y = 230)
+
+        self.__draw_canvas.place(x = 10, y = 350)
+
+        
+    def __drawFunction(self, a, b, e, c, d, f):
+
+        width = int(self.__draw_canvas["width"])
+        height = int(self.__draw_canvas["height"])
+
+        main_rectangle = np.array([[0, 0], [0, height], [width, height] ,[width, 0]])
+        pts = []
+
+        for point in main_rectangle:
+            x = (float(a) * point[0]) + (float(b) * point[1]) + (float(e) * width)
+            y = (float(c) * point[0]) + (float(d) * point[1]) + (float(f) * height)
+            pts.append([x, y])
+            self.__draw_canvas.create_oval(x-3, height-y-3, x+3, height-y+3, fill="red")
+
+        for i in range(len(pts)):
+                x1, y1 = pts[i]
+                x2, y2 = pts[(i + 1) % len(pts)] 
+                self.__draw_canvas.create_line(x1, height-y1, x2, height-y2)
+
+        for i in pts:
+            i[1]  =height - i[1]
+            
+        self.__list_of_rectangles.append(pts)
+        # self.__function_list.append([float(a),float(b),float(c),float(d),float(e)*width,float(f)*height])
+        # self.__drawListOfPoints(pts)
+
+    def __on_click(self, event):
+        rect_id = self.__draw_canvas.find_withtag("current")[0]
+        self.__drag_data[rect_id] = {"x": event.x, "y": event.y}
+        x, y = self.__draw_canvas.coords(rect_id)[0], self.__draw_canvas.coords(rect_id)[1]
+        self.__draw_dot(x, y)
+
+    def __draw_dot(self, x, y):
+        if self.__dot:
+            self.__draw_canvas.delete(self.__dot) 
+        self.__dot = self.__draw_canvas.create_oval(x - 3, y - 3,
+                                              x + 3, y + 3,
+                                              outline='red', fill='red')
 
 
+    def __on_drag(self, event):
+        rect_id = self.__draw_canvas.find_withtag("current")[0]
 
-def plot(plot1, canvas, points : list = None, vertices : list = None):
+        delta_x = event.x - self.__drag_data[rect_id]["x"]
+        delta_y = event.y - self.__drag_data[rect_id]["y"]
+        
+        self.__draw_canvas.move(rect_id, delta_x, delta_y)
+
+        
+        self.__drag_data[rect_id]["x"] = event.x
+        self.__drag_data[rect_id]["y"] = event.y
+
+        pts = self.__draw_canvas.coords(rect_id)
+        pts = [pts[i:i + 2] for i in range(0, len(pts), 2)]
+        self.__list_of_rectangles[rect_id] = pts
+
+        self.__draw_dot(pts[0][0], pts[0][1])
+
+
+    def __on_resize_drag(self, event):
+        rect_id = self.__draw_canvas.find_withtag("current")[0]
+
+        delta_x = event.x - self.__drag_data[rect_id]["x"]
+        delta_y = event.y - self.__drag_data[rect_id]["y"]
+
+        pts = self.__draw_canvas.coords(rect_id)
+        x1, x2, y1, y2 = pts[0],pts[4],pts[1], pts[5]
+
+        center_x = (pts[0] + pts[4]) / 2
+        center_y = (pts[1] + pts[5]) / 2
+
+        scale_x = 1 + delta_x / 100
+        scale_y =  1 - delta_y / 100
+
+        self.__draw_canvas.scale(rect_id, center_x, center_y, scale_x, scale_y)
+
+        self.__drag_data[rect_id]["x"] = event.x
+        self.__drag_data[rect_id]["y"] = event.y
+
+        pts = self.__draw_canvas.coords(rect_id)
+        pts = [pts[i:i + 2] for i in range(0, len(pts), 2)]
+        self.__list_of_rectangles[rect_id] = pts
+        self.__draw_dot(pts[0][0], pts[0][1])
+
+    def __on_rotate_drag(self, event):
+
+        rect_id = self.__draw_canvas.find_withtag("current")[0]
+
+        delta_x = event.x - self.__drag_data[rect_id]["x"]
+        delta_y = event.y - self.__drag_data[rect_id]["y"]
+
+        angle = math.atan2(delta_y, delta_x) * 0.02
+
+        pts = self.__draw_canvas.coords(rect_id)
+        x1, y1, x2, y2, x3, y3, x4, y4 = pts
+
+        center_x = (pts[0] + pts[4]) / 2
+        center_y = (pts[1] + pts[5]) / 2
+
+        def rotate_point(x, y, angle, cx, cy):
+            cos_val = math.cos(angle)
+            sin_val = math.sin(angle)
+            nx = cos_val * (x - cx) - sin_val * (y - cy) + cx
+            ny = sin_val * (x - cx) + cos_val * (y - cy) + cy
+            return nx, ny
+
+        # Oblicz nowe współrzędne dla każdego z wierzchołków
+        new_x1, new_y1 = rotate_point(x1, y1, angle, center_x, center_y)
+        new_x2, new_y2 = rotate_point(x2, y2, angle, center_x, center_y)
+        new_x3, new_y3 = rotate_point(x3, y3, angle, center_x, center_y)
+        new_x4, new_y4 = rotate_point(x4, y4, angle, center_x, center_y)
+
+        # Ustaw nowe współrzędne prostokąta
+        self.__draw_canvas.coords(rect_id, new_x1, new_y1, new_x2, new_y2, new_x3, new_y3, new_x4, new_y4)
+
+        pts = self.__draw_canvas.coords(rect_id)
+        pts = [pts[i:i + 2] for i in range(0, len(pts), 2)]
+        self.__list_of_rectangles[rect_id] = pts
+        self.__draw_dot(pts[0][0], pts[0][1])
+
+    def get_random_color(self):
+        return "#{:02x}{:02x}{:02x}".format(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+    def create_rectangle(self, x1, y1, x2, y2, width=2):
+        outline_color = self.get_random_color()
+        pts = [(x1, y2), (x1, y1), (x2, y1), (x2, y2)]
+        rect = self.__draw_canvas.create_polygon(pts, outline=outline_color, fill="white", width=width, stipple="gray12")
+        
+        self.__draw_canvas.tag_bind(rect, "<Button-1>", self.__on_click)
+        self.__draw_canvas.tag_bind(rect, "<Button-2>", self.__on_click)
+        self.__draw_canvas.tag_bind(rect, "<Button-3>", self.__on_click)
+        self.__draw_canvas.tag_bind(rect, "<B1-Motion>", self.__on_drag)
+        self.__draw_canvas.tag_bind(rect, "<B2-Motion>", self.__on_resize_drag)
+        self.__draw_canvas.tag_bind(rect, "<B3-Motion>", self.__on_rotate_drag)
+
+        pts = self.__draw_canvas.coords(rect)
+        pts = [pts[i:i + 2] for i in range(0, len(pts), 2)]
+        self.__list_of_rectangles[rect] = pts
+
+        self.__draw_dot(pts[0][0], pts[0][1])
+
+    def __calculatePoints(self):
+
+        width = int(self.__draw_canvas["width"])
+        height = int(self.__draw_canvas["height"])
+        
+        main_rectangle = np.array([[0, 0], [0, height],[width, height] ,[width, 0]])
+        src = np.array(main_rectangle)
+        src_homogeneous = np.hstack([src, np.ones((src.shape[0], 1))])
+
+        function_list = []
+
+        if(len(self.__list_of_rectangles) > 0):
+            for i in self.__list_of_rectangles.values():
+                dst_i = i
+                dst = np.array(dst_i)
+                transformation_matrix, _, _, _ = np.linalg.lstsq(src_homogeneous, dst, rcond=None)
+                a, b = transformation_matrix[0]
+                c, d = transformation_matrix[1]
+                e, f = transformation_matrix[2]
+                function_list.append([a, b, c, d, e, f])
+
+        new_points = []
+
+        for i in range(100000):
+            point = (random.uniform(0, width), random.uniform(0, height))
+            for j in range(20):
+                a, b, c, d, e, f = function_list[random.randint(0, len(function_list) - 1)]
+                
+                new_point = (a * point[0]+ b*point[1] + e, height -(c*point[0]+d*point[1]+f))
+                point = new_point
+            new_points.append(new_point)
+
+        plot(self.__plot1, self.__canvas, points=new_points)
+
+def plot(plot1 : Axes, canvas, points : list = None, vertices : list = None):
 
     plot1.clear()
+
     if(vertices != None and len(vertices) != 0):
         plot1.scatter(*zip(*vertices), c="b")
     if(points != None and len(points) != 0):
@@ -925,7 +1182,6 @@ def saveImageToFile(image):
         img = ImageTk.getimage(image)
         img.save(file)
         img.close()
-
 
 
 if __name__ == "__main__":
