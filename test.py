@@ -723,116 +723,133 @@ def main():
 
    
 
-    fig = plt.figure()
-    plot = fig.add_subplot(111)
-    plot.set_xlim(0, 10)
-    plot.set_ylim(0, 10)
+    # fig = plt.figure()
+    # plot = fig.add_subplot(111)
+    # plot.set_xlim(0, 10)
+    # plot.set_ylim(0, 10)
 
-    points = []
-    new_points = []
+    # points = []
+    # new_points = []
 
-    list_of_rectangles = []
-    ani = []
+    # list_of_rectangles = []
+    # ani = []
 
-    def on_click(event, plot, points : list):
-        x, y = event.xdata, event.ydata
-        points.append((float(x), float(y)))
-        plot.plot(x, y, 'ro')
-        plt.draw()
+    # def on_click(event, plot, points : list):
+    #     x, y = event.xdata, event.ydata
+    #     points.append((float(x), float(y)))
+    #     plot.plot(x, y, 'ro')
+    #     plt.draw()
 
-        if len(points) == 3:
+    #     if len(points) == 3:
 
 
-            point_d = (points[0][0] + points[2][0] - points[1][0], points[0][1] + points[2][1] - points[1][1])
-            plot.plot(point_d[0], point_d[1], 'ro')
-            plt.draw()
-            points.append(point_d)
-            list_of_rectangles.append(points.copy())
+    #         point_d = (points[0][0] + points[2][0] - points[1][0], points[0][1] + points[2][1] - points[1][1])
+    #         plot.plot(point_d[0], point_d[1], 'ro')
+    #         plt.draw()
+    #         points.append(point_d)
+    #         list_of_rectangles.append(points.copy())
 
-            hull = ConvexHull(points)
-            # Pobieramy indeksy punktów tworzących otoczkę
-            hull_points = hull.vertices
-            # Zamykamy czworokąt, dodając pierwszy punkt na koniec
-            hull_points = list(hull_points) + [hull_points[0]]
-            # Rysujemy linie łączące punkty otoczki
-            for i in range(len(hull_points) - 1):
-                p1 = points[hull_points[i]]
-                p2 = points[hull_points[i + 1]]
-                plot.plot([p1[0], p2[0]], [p1[1], p2[1]], 'b-')  # 'b-' oznacza niebieską linię
+    #         hull = ConvexHull(points)
+    #         # Pobieramy indeksy punktów tworzących otoczkę
+    #         hull_points = hull.vertices
+    #         # Zamykamy czworokąt, dodając pierwszy punkt na koniec
+    #         hull_points = list(hull_points) + [hull_points[0]]
+    #         # Rysujemy linie łączące punkty otoczki
+    #         for i in range(len(hull_points) - 1):
+    #             p1 = points[hull_points[i]]
+    #             p2 = points[hull_points[i + 1]]
+    #             plot.plot([p1[0], p2[0]], [p1[1], p2[1]], 'b-')  # 'b-' oznacza niebieską linię
             
-            points.clear()
+    #         points.clear()
             
-            plt.draw()
+    #         plt.draw()
 
-            t = turtle.Turtle()
-            turtle.setworldcoordinates(-1, -1, 10, 10)
-            t.speed(0)
-            t.ht()
-            turtle.delay(0)
-            t.penup()
+    #         t = turtle.Turtle()
+    #         turtle.setworldcoordinates(-1, -1, 10, 10)
+    #         t.speed(0)
+    #         t.ht()
+    #         turtle.delay(0)
+    #         t.penup()
 
-            if(len(list_of_rectangles) == 3):
-                main_rectangle = np.array([[10, 0], [0, 0], [0, 10], [10, 10]])
-                src = np.array(main_rectangle)
-                src_homogeneous = np.hstack([src, np.ones((src.shape[0], 1))])
+    #         if(len(list_of_rectangles) == 3):
+    #             main_rectangle = np.array([[10, 0], [0, 0], [0, 10], [10, 10]])
+    #             src = np.array(main_rectangle)
+    #             src_homogeneous = np.hstack([src, np.ones((src.shape[0], 1))])
 
-                function_list = []
+    #             function_list = []
 
 
-                for i in list_of_rectangles:
-                    dst_i = i
-                    dst = np.array(dst_i)
-                    transformation_matrix, _, _, _ = np.linalg.lstsq(src_homogeneous, dst, rcond=None)
-                    a, b = transformation_matrix[0]
-                    c, d = transformation_matrix[1]
-                    e, f = transformation_matrix[2]
-                    function_list.append([a, b, c, d, e, f])
+    #             for i in list_of_rectangles:
+    #                 dst_i = i
+    #                 dst = np.array(dst_i)
+    #                 transformation_matrix, _, _, _ = np.linalg.lstsq(src_homogeneous, dst, rcond=None)
+    #                 a, b = transformation_matrix[0]
+    #                 c, d = transformation_matrix[1]
+    #                 e, f = transformation_matrix[2]
+    #                 function_list.append([a, b, c, d, e, f])
 
-                for i in range(100000):
-                    point = (random.uniform(0, 10), random.uniform(0, 10))
-                    for j in range(10):
-                        a, b, c, d, e, f = function_list[random.randint(0, len(function_list) - 1)]
+    #             for i in range(100000):
+    #                 point = (random.uniform(0, 10), random.uniform(0, 10))
+    #                 for j in range(10):
+    #                     a, b, c, d, e, f = function_list[random.randint(0, len(function_list) - 1)]
                         
-                        new_point = (a * point[0]+ b*point[1] + e, c*point[0]+d*point[1]+f)
-                        point = new_point
-                    new_points.append(new_point)
-                    # t.goto(new_point[0], new_point[1])
-                    # t.dot()
+    #                     new_point = (a * point[0]+ b*point[1] + e, c*point[0]+d*point[1]+f)
+    #                     point = new_point
+    #                 new_points.append(new_point)
+    #                 # t.goto(new_point[0], new_point[1])
+    #                 # t.dot()
 
-                # fig = plt.figure()
-                # plot1 = fig.add_subplot(111)
-                # plot1.set_xlim(0, 500)
-                # plot1.set_ylim(0, 500)
+    #             # fig = plt.figure()
+    #             # plot1 = fig.add_subplot(111)
+    #             # plot1.set_xlim(0, 500)
+    #             # plot1.set_ylim(0, 500)
 
-                # def animate(i):
-                #     graph.set_data(new_points[0][:i+1], new_points[1][:i+1])
-                #     return graph    
-                # ani = FuncAnimation(fig, animate, frames=100000, interval=0.01)
+    #             # def animate(i):
+    #             #     graph.set_data(new_points[0][:i+1], new_points[1][:i+1])
+    #             #     return graph    
+    #             # ani = FuncAnimation(fig, animate, frames=100000, interval=0.01)
                 
-                # start_time = time.time()
-                # # plot.scatter(*zip(*new_points), s=0.09, c="g")
-                # plot.plot(*zip(*new_points), "go", ms=0.4)
-                # stop_time = time.time()
-                # times = stop_time- start_time
-                # print(times)
+    #             # start_time = time.time()
+    #             # # plot.scatter(*zip(*new_points), s=0.09, c="g")
+    #             # plot.plot(*zip(*new_points), "go", ms=0.4)
+    #             # stop_time = time.time()
+    #             # times = stop_time- start_time
+    #             # print(times)
 
-                for i in new_points:
-                    t.goto(i[0], i[1])
-                    t.dot()
+    #             for i in new_points:
+    #                 t.goto(i[0], i[1])
+    #                 t.dot()
 
+    # def wrapper(event):
+    #     on_click(event, plot, points)
 
-
-
-
-
-    def wrapper(event):
-        on_click(event, plot, points)
-
-    cid = fig.canvas.mpl_connect("button_press_event", wrapper)
+    # cid = fig.canvas.mpl_connect("button_press_event", wrapper)
 
 
-    plt.grid()
-    plt.show()
+    # plt.grid()
+    # plt.show()
+
+    import fractals_c
+    import fractals
+
+    # Lista punktów
+    points = [(0.0, 0.0), (1.0, 1.0), (0.5, 1.5)]  # Każdy punkt to krotka (x, y)
+
+    # Liczba iteracji i dystans
+    iterations = 1000000
+    distance = 0.5
+
+    # Wywołanie funkcji z trzema argumentami
+
+    start = time.time()
+    result = fractals.chaos_game_fractal(iterations, distance, points)
+    stop = time.time()
+    print(stop - start)
+
+    start = time.time()
+    result = fractals_c.chaos_game_fractal(iterations, distance, points)
+    stop = time.time()
+    print(stop - start)
 
     
 if __name__ == '__main__':

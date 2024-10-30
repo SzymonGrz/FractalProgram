@@ -1,3 +1,4 @@
+from __future__ import division
 import random
 import ctypes
 import numpy as np
@@ -140,6 +141,11 @@ def draw_image(points : list) :
 
     x_min, x_max = points[:, 0].min(), points[:, 0].max()
     y_min, y_max = points[:, 1].min(), points[:, 1].max()
+
+    if x_max == x_min:
+        x_max += 1
+    if y_max == y_min:
+        y_max += 1
     
     scale_x = image_width / (x_max - x_min)
     scale_y = image_height / (y_max - y_min)
@@ -173,5 +179,53 @@ def l_system_fractal(axiom: str, rules: dict, iterations: int):
         new_route = ""
 
     return route
+
+def rectangle_fractal(width: int, height : int, list_of_rectangles: dict, iterations : int, depth: int):
+    
+
+    main_rectangle = np.array([[0, 0], [0, height],[width, height] ,[width, 0]])
+    src = np.array(main_rectangle)
+    src_homogeneous = np.hstack([src, np.ones((src.shape[0], 1))])
+
+    function_list = []
+
+    if(len(list_of_rectangles) > 0):
+        for rect in list_of_rectangles.values():
+            dst_i = [rect[i:i + 2] for i in range(0, len(rect), 2)]
+            dst = np.array(dst_i)
+            transformation_matrix, _, _, _ = np.linalg.lstsq(src_homogeneous, dst, rcond=None)
+            a, b = transformation_matrix[0]
+            c, d = transformation_matrix[1]
+            e, f = transformation_matrix[2]
+            function_list.append([a, b, c, d, e, f])
+
+    new_points = []
+
+    points = np.column_stack((
+        np.random.uniform(0, width, iterations),
+        np.random.uniform(0, height, iterations)
+    ))
+
+    function_array = np.array(function_list)
+
+    for j in range(depth):
+
+        func_indices = np.random.randint(0, len(function_array), iterations)
+
+        selected_functions = function_array[func_indices]
+        a = selected_functions[:, 0]
+        b = selected_functions[:, 1]
+        c = selected_functions[:, 2]
+        d = selected_functions[:, 3]
+        e = selected_functions[:, 4]
+        f = selected_functions[:, 5]
+
+
+        new_x = a * points[:, 0] + b * points[:, 1] + e
+        new_y = height - (c * points[:, 0] + d * points[:, 1] + f)
+        
+        points = np.column_stack((new_x, new_y))
+
+    return points.tolist()
 
 
