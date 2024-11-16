@@ -2,6 +2,7 @@ from __future__ import division
 import random
 import ctypes
 import numpy as np
+from scipy.ndimage import gaussian_filter
 
 def point_distance(a, p, distance: float):
     return (a[0] + (p[0] - a[0]) * (distance), a[1] + (p[1] - a[1])*(distance))
@@ -23,8 +24,6 @@ def chaos_game_fractal(iterations : int, distance : float, points : list):
 
 def chaos_game_fractal_restricted(iterations : int, jump : float, points: list, condition):
 
-
-    #TODO poprawić. Zamienić x i new_x na punkty
     if(condition == 1):
         points = restricted_fractal(iterations, jump, points, lambda x, new_x : x == new_x)
     elif(condition == 2):
@@ -54,28 +53,6 @@ def restricted_fractal(iterations : int, jump : float, points: list, condition):
         j = point_distance(points[x], j, jump)
         points.append(j)
 
-    return points
-
-def barnsley_fern(iterations: int):
-
-    points = []
-    x: float
-
-    point = (random.uniform(0, 3), random.uniform(0, 10))
-
-    for i in range(iterations):
-        x = random.randint(1, 100)
-        if x <= 1:
-            point = (0, 0.16 * point[1])
-        elif x <= 8:
-            point = (0.2 * point[0] - 0.26 * point[1], 0.23 * point[0] + 0.22* point[1] + 1.6) 
-        elif x <= 15:
-            point = (-0.15 * point[0] + 0.28 * point[1], 0.26 * point[0] + 0.24 * point[1] + 0.44)
-        else:
-            point = (0.85 * point[0] + 0.04 * point[1], -0.04 * point[0] + 0.85 * point[1] + 1.6)
-        points.append(point)
-        
-    
     return points
 
 def affine_fractal(iterations, chances : list, x_transform : list, y_transform : list) :
@@ -116,7 +93,12 @@ def mandelbrot_c(width, height, iterations, xmin, xmax, ymin, ymax):
                        xmin, xmax, ymin, ymax)
     n3 = output.reshape((height, width))
 
-    return n3
+    normalized = n3 / iterations
+    log_transformed = np.log1p(normalized * (np.e - 1))
+    
+    smoothed = gaussian_filter(log_transformed, sigma=0.5)
+
+    return smoothed
 
 def julia_c(c, width, height, iterations, xmin, xmax, ymin, ymax):
     lib = ctypes.CDLL('./mandelbrot.dll')
@@ -128,16 +110,17 @@ def julia_c(c, width, height, iterations, xmin, xmax, ymin, ymax):
     lib.julia_set(width, height, iterations, c.real, c.imag, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
                    xmin, xmax, ymin, ymax)
     n3 = output.reshape((height, width))
-    
-    return n3
 
-def draw_image(points : list) :
+    normalized = n3 / iterations
+    log_transformed = np.log1p(normalized * (np.e - 1))
+    
+    smoothed = gaussian_filter(log_transformed, sigma=0.5)
+    
+    return smoothed
+
+def draw_image(points : list, width = 500, height = 500) :
 
     points = np.array(points)
-
-    image_height = 499
-    image_width = 499
-    image = np.zeros((500, 500), dtype=np.uint8)
 
     x_min, x_max = points[:, 0].min(), points[:, 0].max()
     y_min, y_max = points[:, 1].min(), points[:, 1].max()
@@ -146,6 +129,12 @@ def draw_image(points : list) :
         x_max += 1
     if y_max == y_min:
         y_max += 1
+
+    image = np.zeros((width, height), dtype=np.uint8)
+
+    image_height = height-1
+    image_width = width-1
+
     
     scale_x = image_width / (x_max - x_min)
     scale_y = image_height / (y_max - y_min)
@@ -163,6 +152,39 @@ def draw_image(points : list) :
     image[points[:, 1], points[:, 0]] = 255
 
     return image
+
+def draw_vertices(vertices: list):
+
+    im_width = 500
+    im_height = 500
+
+    min_x = min(vertices, key=lambda p: p[0])[0]
+    max_x = max(vertices, key=lambda p: p[0])[0]
+
+    min_y = min(vertices, key=lambda p: p[1])[1]
+    max_y = max(vertices, key=lambda p: p[1])[1]
+
+    if(min_x < 0):
+        vertices = [[x - min_x, y] for [x, y] in vertices]
+    if(min_y < 0):
+        vertices = [[x, y - min_y] for [x, y] in vertices]
+
+    
+    width = abs(max_x - min_x)
+    height = abs(max_y - min_y)
+
+    try: 
+        scale_x = im_width / width
+    except(ZeroDivisionError):
+        scale_x = 1
+    try:
+        scale_y = im_height / height
+    except(ZeroDivisionError):
+        scale_y = 1
+
+    scaled_vertices = [(x * scale_x, y * scale_y) for x, y in vertices]
+    return scaled_vertices
+
 
 def l_system_fractal(axiom: str, rules: dict, iterations: int):
 

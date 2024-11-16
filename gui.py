@@ -5,7 +5,7 @@ from tkinter import ttk
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk) 
-from PIL import Image
+from PIL import Image, ImageGrab, ImageTk
 import cv2
 import numpy as np
 from scipy import ndimage
@@ -14,7 +14,6 @@ from collections import deque
 import random
 import math
 import re
-import time
 import json
 
 import fractals
@@ -25,6 +24,17 @@ class App(tk.Tk):
         self.state('zoomed')
         self._frame = None
         self.switch_frame(StartFrame)
+
+        NavigationToolbar2Tk.toolitems = (
+            ('Home', 'Reset original view', 'home', 'home'),
+            ('Back', 'Back to  previous view', 'back', 'back'),
+            ('Forward', 'Forward to next view', 'forward', 'forward'),
+            (None, None, None, None),
+            ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
+            ('Zoom', 'Zoom to rectangle', 'zoom_to_rect', 'zoom'),
+            (None, None, None, None),
+            ('Save', 'Save the figure', 'filesave', 'save_figure'),
+  )
 
     def switch_frame(self, frame_class):
         """Destroys current frame and replaces it with a new one."""
@@ -58,8 +68,6 @@ class StartFrame(tk.Frame):
         button4.pack(pady = 10)
         button5.pack(pady = 10)
 
-        
-
 class FractalFrame(tk.Frame):
 
     def __init__(self, parent):
@@ -71,8 +79,6 @@ class FractalFrame(tk.Frame):
         self.__vertex_number = 0
         self.__last_iterations_number = 0
         self.__last_jump = 0
-
-        self.__errorDict = {}
 
         ####################################
 
@@ -92,6 +98,17 @@ class FractalFrame(tk.Frame):
 
         canvas_frame = tk.Frame(self)
 
+        fig = Figure(figsize = (6, 6), dpi = 100, facecolor="black")
+        plot1 = fig.add_subplot(111)
+        fig.subplots_adjust(0, 0, 1, 1)
+        plot1.set_facecolor("black")
+        plot1.set_xlim(0, 500)
+        plot1.set_ylim(0, 500)
+        plot1.autoscale(False)
+        fig.patch.set_facecolor('black')
+        canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
+        toolbar = NavigationToolbar2Tk(canvas, canvas_frame)
+
         button = ttk.Button(back_button_frame, text="Powrót",
                            command=lambda: parent.switch_frame(StartFrame))
         point_entry_x = ttk.Entry(x_entry_frame, validate="key")
@@ -103,21 +120,13 @@ class FractalFrame(tk.Frame):
         jump_entry = ttk.Entry(jump_frame)
         draw_button = ttk.Button(canvas_buttons_frame, text="Rysuj", 
                                 command=lambda: [self.__plotFractal(plot1, canvas ,iterations_entry.get(),
-                                jump_entry.get(), self.__points, restriction_choice.get()), 
-                                iterations_entry.delete(0, tk.END), jump_entry.delete(0, tk.END)])
+                                jump_entry.get(), self.__points, restriction_choice.get())])
         clear_button = ttk.Button(canvas_buttons_frame, text="Wyczyść", command= lambda : [self.__clearPlot(plot1, canvas),
                 iterations_entry.delete(0, tk.END), jump_entry.delete(0, tk.END)])
 
         save_button = ttk.Button(canvas_buttons_frame, text="Zapisz", command = lambda : self.__saveConfig())
         load_button = ttk.Button(canvas_buttons_frame, text="Wczytaj", command= lambda : self.__loadConfig(plot1, 
                             canvas, iterations_entry, jump_entry))
-
-        fig = Figure(figsize = (6, 6), dpi = 100)
-        plot1 = fig.add_subplot(111)
-        fig.subplots_adjust(0, 0, 1, 1)
-        fig.patch.set_facecolor('black')
-        canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
-        toolbar = NavigationToolbar2Tk(canvas, canvas_frame)
 
         ####################################
 
@@ -165,22 +174,28 @@ class FractalFrame(tk.Frame):
         toolbar.update()
         canvas.get_tk_widget().pack()
     
-    def __addPoint(self, xString, yString, plot, canvas):
+    def __addPoint(self, xString, yString, plot1 : Axes, canvas : tk.Canvas):
         
         try:
             x = float(xString)
             y = float(yString)
-        except(ValueError):
-            messagebox.showerror("Nieprawidłowa wartość", "x oraz y muszą być typu float")
+
+            if(x < 0 or x > 500 or y < 0 or y > 500):
+                raise RuntimeError()
+        except ValueError:
+            messagebox.showerror("Nieprawidłowa wartość", "x oraz y muszą być typu zmiennoprzecinkowego")
             return 
+        except RuntimeError:
+            messagebox.showerror("Nieprawidłowa wartość", "x oraz y muszą być w zakresie od 0 do 500")
+            return
+
         self.__points.append((x, y))
         self.__vertex_number += 1
 
         if(self.__fractal_plotted):
-            plot.clear()
+            plot(plot1, canvas)
             self.__fractal_plotted = False
-        plot.scatter(x, y, c="b")
-        canvas.draw()
+        plot(plot1, canvas, vertices=self.__points)
 
     def __plotFractal(self, plot1, canvas, iterationsString, jumpString, points : list, restriction : int):
 
@@ -204,11 +219,8 @@ class FractalFrame(tk.Frame):
         new_points = points.copy()
 
         if(restriction == 0):
-            # start = time.time()
             new_points = fractals.chaos_game_fractal(iterations, jump, new_points)
-            # stop = time.time()
-            # print(stop - start)
-            plot(plot1, canvas, new_points)
+            plot(plot1, canvas, new_points, points, True)
             plot1.axis('off')
         else:
             new_points = fractals.chaos_game_fractal_restricted(iterations, jump, new_points, restriction)
@@ -217,7 +229,7 @@ class FractalFrame(tk.Frame):
 
         self.__fractal_plotted = True
         
-    def __clearPlot(self, plot1, canvas):
+    def __clearPlot(self, plot1 : Axes, canvas : tk.Canvas):
         plot(plot1, canvas)
         self.__emptyPoints()
         self.__fractal_plotted = False
@@ -239,7 +251,7 @@ class FractalFrame(tk.Frame):
             "jump": self.__last_jump
         }
 
-        info = json.dumps(dict, indent = 4)
+        info = json.dumps(dict)
         file.write(info)
 
         file.close()
@@ -249,11 +261,24 @@ class FractalFrame(tk.Frame):
         file = tk.filedialog.askopenfile(mode="r", defaultextension=".frac", filetypes=[('Fractal files', '*.frac')])
         if(file == None):
             return
-
-        info = json.load(file)
+        
         self.__clearPlot(plot1, canvas)
+        
+        try:
+            info = json.load(file)
+
+            if not (all(
+            isinstance(item, list) and len(item) == 2 and
+            all(isinstance(coord, (int, float)) for coord in item)
+            for item in info['points'])):
+                raise json.decoder.JSONDecodeError("Error", "", 0)
+            
+        except json.decoder.JSONDecodeError:
+            messagebox.showerror("Błąd", "Nieprawidłowy format danych")
+            return
 
         self.__points = info['points']
+
         self.__last_iterations_number = info['iterations']
         self.__last_jump = info['jump']
 
@@ -264,7 +289,7 @@ class FractalFrame(tk.Frame):
 
         plot(plot1, canvas, vertices=self.__points)
         self.__fractal_plotted = False
-        
+
 class AffineFractalFrame(tk.Frame):
 
     def __init__(self, parent):
@@ -328,10 +353,10 @@ class AffineFractalFrame(tk.Frame):
         list_canvas.create_window((0, 0), window=list_frame, anchor='nw')
         list_frame.bind("<Configure>", __scroll)
        
-        fig = Figure(figsize = (6, 6), dpi = 100)
+        fig = Figure(figsize = (6, 6), dpi = 100, facecolor="black")
         plot1 = fig.add_subplot(111)
+        plot1.set_facecolor("black")
         fig.subplots_adjust(0, 0, 1, 1)
-        fig.patch.set_facecolor('black')
         canvas_frame = tk.Frame(self)
         canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
         toolbar = NavigationToolbar2Tk(canvas, canvas_frame) 
@@ -452,6 +477,7 @@ class AffineFractalFrame(tk.Frame):
         self.__last_iterations_number = iterations
 
         points = fractals.affine_fractal(iterations,self.__chances, self.__x_transform, self.__y_transform)
+        plot1.clear()
         plot(plot1, canvas, points)
         plot1.axis('off')
 
@@ -499,7 +525,7 @@ class AffineFractalFrame(tk.Frame):
             "y_transform": self.__y_transform,
             "iterations": self.__last_iterations_number
         }
-        info = json.dumps(dict, indent = 4)
+        info = json.dumps(dict)
         file.write(info)
         file.close()
 
@@ -509,7 +535,23 @@ class AffineFractalFrame(tk.Frame):
             return
         self.__clearPlot(plot1, canvas, label, iterEntry)
 
-        info = json.load(file)
+        try:
+            info = json.load(file)
+
+            if not( all(isinstance(item, float) for item in info['chances']) ):
+                raise json.decoder.JSONDecodeError("", "", 0)
+            
+            if not (all(isinstance(item, list) and all(isinstance(coord, float) for coord in item)
+            for item in info['x_transform'])):
+                raise json.decoder.JSONDecodeError("", "", 0)
+            
+            if not (all(isinstance(item, list) and all(isinstance(coord, float) for coord in item)
+            for item in info['y_transform'])):
+                raise json.decoder.JSONDecodeError("", "", 0)
+
+        except json.decoder.JSONDecodeError:
+            messagebox.showerror("Błąd", "Nieprawidłowy format danych")
+            return
 
         self.__chances = info['chances']
         self.__x_transform = info['x_transform']
@@ -551,14 +593,15 @@ class MandelJuliaFrame(tk.Frame) :
                            command=lambda: parent.switch_frame(StartFrame))
         
         draw_button = ttk.Button(canvas_button_frame, text = "Rysuj", 
-            command = lambda : [self.__setLimits(plot_choice.get()) ,self.__plotFractal(self.__plot, canvas, 
-                    c_real_entry.get(), c_imag_entry.get(), plot_choice.get())])
+            command = lambda :  self.__plotFractal(self.__plot, canvas, 
+                    c_real_entry.get(), c_imag_entry.get(), plot_choice.get(), True))
         clear_button = ttk.Button(canvas_button_frame, text = "Wyczyść", 
             command = lambda : self.__clearPlot(self.__plot, canvas))
         
         
         plot_choice = tk.IntVar()
         plot_choice.set(0)
+        self.__oldChoice = 0
         choose_mandel_radio = ttk.Radiobutton(radio_frame, text = "Zbiór Mandelbrota", variable=plot_choice, value = 0)
         choose_julia_radio = ttk.Radiobutton(radio_frame, text = "Zbiór Julii", variable=plot_choice, value = 1)
 
@@ -574,6 +617,24 @@ class MandelJuliaFrame(tk.Frame) :
         canvas_frame = ttk.Frame(self)
         canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
         toolbar = NavigationToolbar2Tk(canvas, canvas_frame) 
+        toolbar.update()
+
+        home = toolbar.home
+        back = toolbar.back
+        forward = toolbar.forward
+        def newHome(*args, **kwargs):
+            home(*args, **kwargs)
+            callback_wrapper()
+        def newBack(*args, **kwargs):
+            back(*args, **kwargs)
+            callback_wrapper()
+        def newForward(*args, **kwargs):
+            forward(*args, **kwargs)
+            callback_wrapper()
+
+        toolbar.winfo_children()[0].configure(command=newHome)
+        toolbar.winfo_children()[1].configure(command=newBack)
+        toolbar.winfo_children()[2].configure(command=newForward)
 
         ###########################################################
 
@@ -597,8 +658,6 @@ class MandelJuliaFrame(tk.Frame) :
 
         canvas_frame.pack(side=tk.RIGHT,anchor=tk.W, pady = 10, padx = 50)
         canvas.get_tk_widget().pack()
-        toolbar.update()
-        canvas.get_tk_widget().pack()
 
         ############################################################
 
@@ -609,14 +668,17 @@ class MandelJuliaFrame(tk.Frame) :
             self.__xmin, self.__xmax = xlim 
             self.__ymin, self.__ymax = ylim
             self.__plotFractal(self.__plot, canvas, c_real_entry.get(), c_imag_entry.get(),
-                                               plot_choice.get())
+                                               self.__oldChoice)
             
-
         fig.canvas.mpl_connect('button_release_event', callback_wrapper)
-        #self.__plot.callbacks.connect('xlim_changed', callback_wrapper)
 
-    def __plotFractal(self, plot1 : Axes, canvas, c_real_string : str, c_imag_string : str, plot_choice):
+    def __plotFractal(self, plot1 : Axes, canvas, c_real_string : str, c_imag_string : str, plot_choice, clicked : bool = False):
 
+        if(clicked):
+            self.__setLimits(plot_choice)
+            self.__oldChoice = plot_choice
+            plot1.clear()
+            plot1.get_figure().canvas.toolbar.update()
 
         if(plot_choice == 0):
             points = fractals.mandelbrot_c(1000, 1000, 255, self.__xmin, self.__xmax, self.__ymin, self.__ymax)
@@ -636,17 +698,13 @@ class MandelJuliaFrame(tk.Frame) :
 
         points = ndimage.rotate(points, 90)
         plot1.clear()
-        plot1.imshow(np.flipud(np.fliplr(points.T)), extent=(self.__xmin, self.__xmax, self.__ymin, self.__ymax))
+        plot1.imshow(np.flipud(np.fliplr(points.T)), extent=(self.__xmin, self.__xmax, self.__ymin, self.__ymax), cmap='twilight_shifted')
         plot1.axis('off')
         canvas.draw()
         
     def __clearPlot(self, plot1, canvas):
         plot1.clear()
         canvas.draw()
-
-    # def __saveImageToFile(self, imageLabel: tk.Label):
-    #     image = imageLabel.image
-    #     saveImageToFile(image)
 
     def __setLimits(self, choice):
         if(choice == 0):
@@ -666,33 +724,39 @@ class TutorialFrame(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent, width = 1366, height = 768)
 
-        self.__current_frame : ttk.Frame = None
+        # self.__current_frame : ttk.Frame = None
 
         widgets_frame = ttk.Frame(self)
         buttons_frame = ttk.Frame(widgets_frame)
-        chaos_game_frame = ttk.Frame(self)
-        rectangle_frame = ttk.Frame(self)
-        lsystem_frame = ttk.Frame(self)
-        ifs_frame = ttk.Frame(self)
-        mandelbrot_frame = ttk.Frame(self)
-        julia_frame = ttk.Frame(self)
+        # introduction_frame = ttk.Frame(self)
+        # chaos_game_frame = ttk.Frame(self)
+        # rectangle_frame = ttk.Frame(self)
+        # lsystem_frame = ttk.Frame(self)
+        # ifs_frame = ttk.Frame(self)
+        # mandelbrot_frame = ttk.Frame(self)
+        # julia_frame = ttk.Frame(self)
+
+        canvas_frame = ttk.Frame(self)
 
         ##BUTTONS
 
         button = ttk.Button(buttons_frame, text="Powrót",
                            command=lambda: parent.switch_frame(StartFrame))
-        chaos_game_tutorial_button = ttk.Button(buttons_frame, text = "Gra w chaos", 
-            command = lambda : self.__packFrame(chaos_game_frame))
+        intro_button = ttk.Button(buttons_frame, text = "Wprowadzenie", command = lambda: self.__showCanvas('intro'))
+        chaos_game_tutorial_button = ttk.Button(buttons_frame, text = "Gra w chaos",
+                command = lambda : self.__showCanvas('chaos'))
         rectangle_tutorial_button = ttk.Button(buttons_frame, text = "IFS - wersja graficzna",
-            command= lambda : self.__packFrame(rectangle_frame))
+                command = lambda: self.__showCanvas('rect'))
         affine_tutorial_button = ttk.Button(buttons_frame, text = "IFS",
-            command= lambda : self.__packFrame(ifs_frame))
+                command = lambda: self.__showCanvas('ifs'))
         mandelbrot_tutorial_button = ttk.Button(buttons_frame, text = "Zbiór Mandelbrota",
-            command= lambda : self.__packFrame(mandelbrot_frame))
+                command = lambda : self.__showCanvas('mandelbrot'))
         julia_tutorial_button = ttk.Button(buttons_frame, text = "Zbiory Julii",
-            command= lambda : self.__packFrame(julia_frame))
-        lsystem_tutorial_button = ttk.Button(buttons_frame, text = "L-system", 
-            command = lambda : self.__packFrame(lsystem_frame))
+                command = lambda: self.__showCanvas('julia'))
+        lsystem_tutorial_button = ttk.Button(buttons_frame, text = "L-system",
+                command = lambda : self.__showCanvas('lsys'))
+
+        self.__canvas = tk.Canvas(canvas_frame, width = 1000, height = 700)
 
         #---------------------------------------#
 
@@ -700,6 +764,7 @@ class TutorialFrame(tk.Frame):
         buttons_frame.pack(side = tk.TOP, fill='x', pady=5)
 
         button.pack(side=tk.TOP, anchor = tk.W)
+        intro_button.pack(side=tk.TOP, anchor = tk.W, pady = 10)
         chaos_game_tutorial_button.pack(side=tk.TOP, anchor = tk.W, pady = 10)
         affine_tutorial_button.pack(side=tk.TOP, anchor = tk.W)
         rectangle_tutorial_button.pack(side=tk.TOP, anchor = tk.W, pady = 10)
@@ -707,71 +772,57 @@ class TutorialFrame(tk.Frame):
         mandelbrot_tutorial_button.pack(side=tk.TOP, anchor = tk.W, pady = 10)
         julia_tutorial_button.pack(side=tk.TOP, anchor = tk.W)
 
-        # ttk.Label(self, text="Wprowadzenie", font=("Arial", 30)).place(x = 10, y = 60)
-        # ttk.Label(self, text="Fraktal to figura samopodobna itd."). place(x = 10, y = 130)
+        canvas_frame.pack(side = tk.LEFT, anchor = tk.W, padx = 15)
+        self.__canvas.pack(side = tk.LEFT, anchor = tk.W)
 
-        ##CHAOS GAME
+        # introduction_frame.pack(side = tk.TOP, anchor = tk.W, padx = 20)
+        # ttk.Label(introduction_frame, text = "Wprowadzenie", font = ('Arial', 30)).pack(pady = 15)
+        # ttk.Label(introduction_frame, text = "Objaśnienie czym jest fraktal")
 
-        explanation_chaos_game = """Algorytm gry w chaos polega na wyznaczeniu punktów stanowiących
-wierzchołki figury fraktalnej, wyznaczenie punktu początkowego, 
-oraz wyznaczanie kolejnych punktów leżących w określonej odległości pomiędzy 
-losowo dobranym wierzchołkiem a ostatnio wyznaczonym punktem rozpoczynając od punktu początkowego. 
-Punkty dobrane w taki sposób powinny utworzyć obraz fraktalny jeżeli wierzchołki oraz odległość
-pomiędzy punktami zostały dobrane odpowiednio"""
+    # def __packFrame(self, new_frame : ttk.Frame):
 
-        ttk.Label(chaos_game_frame, text = explanation_chaos_game).pack()
+    #     if(self.__current_frame != None):
+    #         self.__current_frame.pack_forget()
+    #     elif(self.__current_frame is new_frame):
+    #         return
+    #     new_frame.pack()
+    #     self.__current_frame = new_frame
 
-        ##CHAOS GAME GRAPHIC
+    def __showCanvas(self, frac_name : str):
+        self.__canvas.delete('all')
+        match(frac_name):
+            case 'intro':
+                self.__canvas.create_text(150, 50, text='Wprowadzenie', font=('Arial', 30))
+                self.__canvas.create_text(150, 100, text = 'Czym jest fraktal itd.')
+            case 'chaos':
+                self.img = tk.PhotoImage(file = "./images/chaosGame.png")
+                self.__canvas.create_image(350, 300, image = self.img)
+            case 'ifs':
+                self.img = tk.PhotoImage(file = "./images/ifs.png")
+                self.__canvas.create_image(350, 300, image = self.img)
+            case 'lsys':
+                self.img = tk.PhotoImage(file = "./images/lsys.png")
+                self.__canvas.create_image(385, 300, image = self.img)
+            case 'rect':
+                self.img = tk.PhotoImage(file = "./images/rect.png")
+                self.__canvas.create_image(380, 300, image = self.img)
+            case 'mandelbrot':
+                self.img = Image.open("./images/mandelbrot.png")
+                self.img = self.img.resize((int(self.img.width*0.9), int(self.img.height*0.9)))
+                self.img = ImageTk.PhotoImage(self.img)
+                self.__canvas.create_image(380, 350, image = self.img)
+            case 'julia':
+                self.img = Image.open("./images/julia.png")
+                self.img = self.img.resize((int(self.img.width*0.9), int(self.img.height*0.9)))
+                self.img = ImageTk.PhotoImage(self.img)
+                self.__canvas.create_image(380, 350, image = self.img)
+            case _ :
+                pass
+            
+            
+                
 
-        explanation_rect = """Graficzny algorytm IFS jest modyfikacją klasycznego algorytmu IFS.
-Zamiast zbioru funkcji korzysta on z prostokątów będących mapami pewnego określonego prostokątnego
-obszaru (oznacza to że w każdym mniejszym prostokącie znajduje się kopia głównego obszaru).
-Funkcje afiniczne wyznaczane są za pomocą mniejszych prostokątów. Punkty należące do zbioru fraktala
-wyznaczane są poprzez przekształcanie pewnego zbioru punktów, przy wykorzsystaniu losowo dobieranych
-funkcji afinicznych. Proces jest powtarzany określoną liczbę razy dla każdego punktu (Zależy od tego
-dokładność uzyskanego fraktala). W przeciwieństwie do klasycznego algorytmu nie występuje tu zależność
-danych i każdy punkt wyznaczany jest osobno"""
 
-        ttk.Label(rectangle_frame, text = explanation_rect).pack()
-
-        ##IFS 
-
-        explanation_ifs = """Algorytm IFS polega na dobraniu losowego punktu początkowego, 
-a następnie wyznaczanie kolejnych punktów poprzez losowe dobieranie funkcji afinicznej ze
-zdefiniowanego zbioru i przekształcanie ostatniego wyznaczonego punktu rozpoczynając od punktu
-początkowego. Odpowiednie dobranie współczynników funkcji afinicznych wpływa na efekt końcowy"""
-
-        ttk.Label(ifs_frame, text = explanation_ifs).pack()
-
-        ##L_SYSTEM
-
-        explanation_lsystem = """L-system lub System Lindenmayera jest rodzajem gramatyki formalnej.
-Składa się on ze aksjomatu, zmiennych, stałych oraz reguł. Aksjomat jest stanem początkowym.
-Zmienne są zbiorem symboli który poddawany jest zmianom według zbioru reguł. Stałe nie są modyfikowane
-przez reguły. W każdej iteracji wyznaczany jest ciąg znaków, począwszy od aksjomatu, który powstaje
-wskutek wykorzystania zbioru reguł, odnoszących się do zmiennych (zmienna obecna w ciągu 
-jest podmieniana na inny ciąg znaków jeżeli istnieje odpowiadająca jej reguła. W ten sposób powstaje
-ciąg znaków który może być wykorzystany do narysowania obrazu fraktalnego poprzez przypisanie
-do poczszególnych znaków, instrukcji rysowania."""
-
-        ttk.Label(lsystem_frame, text = explanation_lsystem).pack()
-
-        ##MANDELBROT
-
-        ttk.Label(mandelbrot_frame, text = "Mandelbrot frame").pack()
-
-        ##JULIA
-
-        ttk.Label(julia_frame, text = "Julia frame").pack()
-
-    def __packFrame(self, new_frame : ttk.Frame):
-
-        if(self.__current_frame != None):
-            self.__current_frame.pack_forget()
-        elif(self.__current_frame is new_frame):
-            return
-        new_frame.pack()
-        self.__current_frame = new_frame
 
 
 class LibraryFrame(tk.Frame):
@@ -785,7 +836,7 @@ class LibraryFrame(tk.Frame):
                            command=lambda: parent.switch_frame(StartFrame))
         
 
-        fig = Figure(figsize = (5, 5), dpi = 100)
+        fig = Figure(figsize = (6.5, 6.5), dpi = 100)
         plot1 = fig.add_subplot(111)
         fig.subplots_adjust(0, 0, 1, 1)
         canvas_frame = tk.Frame(self)
@@ -793,12 +844,16 @@ class LibraryFrame(tk.Frame):
 
         fractalList = tk.Listbox(widgets_frame, selectmode='single')
 
+        imageLabel = tk.Label(self)
+
         
         list = ["Trójkąt Sierpińskiego","Dywan Sierpińskiego", "Paproć Barnsley'a", "Fraktal Viscek'a", 
-                "Krzywa Koch'a", "Smok Heighway'a", "Krzywa Levy'ego", "Zbiór Mandelbrota", "Zbiór Julii - Przykład"]
+                "Krzywa Koch'a", "Smok Heighway'a", "Krzywa Levy'ego", "Zbiór Mandelbrota", "Zbiór Julii - Przykład",
+                "Dywan Sierpińskiego - L-System"]
         for i in range(len(list)):
             fractalList.insert(i, list[i])
-        fractalList.bind('<<ListboxSelect>>', lambda event:  self.__onSelect(event, plot1, canvas))
+        fractalList.bind('<<ListboxSelect>>', lambda event:  self.__onSelect(event, plot1, canvas, 
+            imageLabel, canvas_frame))
 
         ##############################################
 
@@ -810,19 +865,16 @@ class LibraryFrame(tk.Frame):
         canvas.get_tk_widget().pack()
         canvas.get_tk_widget().pack()
 
-        # button.place(x=10, y = 10)
-        # fractalList.place(x = 10, y = 60)
 
-        # canvas_frame.place(x = 300, y = 10)
-        # canvas.get_tk_widget().pack()
-        # canvas.get_tk_widget().pack()
-
-    def __onSelect(self, event : tk.Event, plot1, canvas):
+    def __onSelect(self, event : tk.Event, plot1, canvas, imageLabel: tk.Label, canvasFrame):
         w = event.widget
         index = w.curselection()[0]
         value = w.get(index)
 
         points = []
+
+        imageLabel.pack_forget()
+        canvasFrame.pack(side = tk.RIGHT, padx = 50, pady = 10)
 
         if(index == 0):
             points = fractals.chaos_game_fractal(60000, 0.5, [(0, 0), (10, 0), (5, 8.65)])
@@ -834,7 +886,9 @@ class LibraryFrame(tk.Frame):
             plot1.set_xlim(10)
             plot1.set_ylim(10)
         elif(index == 2):
-            points = fractals.barnsley_fern(60000)
+            points = fractals.affine_fractal(100000, [1.0, 85.0, 7.0, 7.0],
+            [[0.0, 0.0, 0.0], [0.85, 0.04, 0.0], [0.2, -0.26, 0.0], [-0.15, 0.28, 0.0]], 
+            [[0.0, 0.16, 0.0], [-0.04, 0.85, 1.6], [0.23, 0.22, 1.6], [0.26, 0.24, 0.44]])
             plot1.set_xlim(10)
             plot1.set_ylim(10)
         elif(index == 3):
@@ -863,16 +917,24 @@ class LibraryFrame(tk.Frame):
         elif(index == 7):
             plot(plot1, canvas)
             points = fractals.mandelbrot_c(500, 500, 255, -2, 1, -1.5, 1.5)
-            plot1.imshow(points.T, aspect='auto')
+            plot1.imshow(np.fliplr(points.T), extent=(-2, 1, -1.5, 1.5), cmap='twilight_shifted')
             canvas.draw()
             return
         elif(index == 8):
             plot(plot1, canvas)
             points = fractals.julia_c(c = 0.37 + 0.1j, width = 500, 
                                 height = 500, iterations=255, xmin=-2.0, xmax = 2.0, ymin=-2.0, ymax = 2.0)
-            plot1.imshow(points.T, aspect= 'auto')
+            plot1.imshow(np.flipud(np.fliplr(points.T)), extent=(-2.0, 2.0, -2.0, 2.0), cmap='twilight_shifted')
             canvas.draw()
             return
+        elif(index == 9):
+            image = ImageTk.PhotoImage(Image.open("./fractals/pictures/sierpinski.png"))
+            imageLabel.configure(image = image)
+            imageLabel.image = image
+            canvasFrame.pack_forget()
+            imageLabel.pack(side = tk.RIGHT, padx = 50, pady = 10)
+            return
+
 
         plot(plot1, canvas, points = points)
 
@@ -940,11 +1002,11 @@ class LSystemFrame(tk.Frame):
         angle_entry = ttk.Entry(entry_frame, width = 10)
         iter_entry = ttk.Entry(entry_frame, width = 10)
         length_slider = ttk.Scale(line_length_frame, from_=0, to=100, orient=tk.HORIZONTAL)
-        self.draw_button = ttk.Button(canvas_buttons_frame, text = "Rysuj", 
+        self.__draw_button = ttk.Button(canvas_buttons_frame, text = "Rysuj", 
                         command = lambda: self.__drawTurtle(self.__rules, start_entry.get(), 
                                                 angle_entry.get(), length_slider.get(), iter_entry.get()))
-        self.stop_button = ttk.Button(canvas_buttons_frame, text = "Stop", command= self.__stopTurtle)
-        self.clear_button = ttk.Button(canvas_buttons_frame, text = "Wyczyść", command=self.__clearScreen)
+        self.__stop_button = ttk.Button(canvas_buttons_frame, text = "Stop", command= self.__stopTurtle)
+        self.__clear_button = ttk.Button(canvas_buttons_frame, text = "Wyczyść", command=self.__clearScreen)
 
         rules_label = ttk.Label(rule_list_frame, text="", justify="left", anchor= tk.W)
 
@@ -953,6 +1015,9 @@ class LSystemFrame(tk.Frame):
 
         self.__load_button = ttk.Button(save_load_frame, text = "Wczytaj",
                     command = lambda: self.__loadConfig(start_entry, angle_entry, rules_label))
+        
+        self.__image_button = ttk.Button(save_load_frame, text = "Zapisz obraz", 
+                                  command = self.__saveImageToFile)
 
         #######################################################
 
@@ -988,13 +1053,14 @@ class LSystemFrame(tk.Frame):
         length_slider.pack(side = tk.BOTTOM, anchor = tk.W)
 
         canvas_buttons_frame.pack(side = tk.TOP, fill = tk.X, pady = 5)
-        self.draw_button.pack(side = tk.LEFT, anchor=tk.W)
-        self.stop_button.pack(side = tk.LEFT, anchor=tk.W, padx = 15)
-        self.clear_button.pack(side = tk.LEFT, anchor=tk.W)
+        self.__draw_button.pack(side = tk.LEFT, anchor=tk.W)
+        self.__stop_button.pack(side = tk.LEFT, anchor=tk.W, padx = 15)
+        self.__clear_button.pack(side = tk.LEFT, anchor=tk.W)
 
         save_load_frame.pack(side = tk.TOP, fill = tk.X)
         self.__save_button.pack(side = tk.LEFT, anchor = tk.W)
         self.__load_button.pack(side = tk.LEFT, anchor= tk.W, padx = 15)
+        self.__image_button.pack(side = tk.LEFT, anchor = tk.W)
 
         rule_list_frame.pack(side=tk.TOP, fill = tk.X, pady = 20)
         rules_label.pack(side = tk.LEFT, anchor=tk.W)
@@ -1010,7 +1076,7 @@ class LSystemFrame(tk.Frame):
             messagebox.showerror("Błąd", "Zmienna musi być oznaczona pojedynczym znakiem")
             return
         
-        if re.match("[\\+-\\[\\]]", variable):
+        if re.search(r'[+\-\[\]]', variable):
             messagebox.showerror("Błąd", "Zmiennymi nie mogą być znaki +, -, [, ]")
             return
 
@@ -1038,12 +1104,10 @@ class LSystemFrame(tk.Frame):
             messagebox.showerror("Błąd", "Iteracje muszą być liczbą naturalną")
             return
 
-
-        # canvas = self.__turtle.getscreen()
-
-        self.draw_button.configure(state="disabled")
+        self.__draw_button.configure(state="disabled")
         self.__load_button.configure(state="disabled")
         self.__save_button.configure(state = "disabled")
+        self.__image_button.configure(state = "disabled")
         self.__screen.cv.unbind("<Button-1>")
         self.__screen.cv.unbind('<Button-3>')
 
@@ -1054,7 +1118,6 @@ class LSystemFrame(tk.Frame):
 
         forward = length
 
-        # canvas.clear()
         self.__screen.reset()
         self.__turtle.penup()
         self.__turtle.setpos(self.__turtle_x, self.__turtle_y)
@@ -1091,9 +1154,10 @@ class LSystemFrame(tk.Frame):
             else:
                 pass
         
-        self.draw_button.configure(state="normal")
+        self.__draw_button.configure(state="normal")
         self.__load_button.configure(state="normal")
         self.__save_button.configure(state = "normal")
+        self.__image_button.configure(state = "normal")
         self.__screen.cv.bind("<Button-1>", self.__onLeftClick)
         self.__screen.cv.bind('<Button-3>', self.__onRightClick)
         self.__turtle.st()
@@ -1138,7 +1202,7 @@ class LSystemFrame(tk.Frame):
             "start" : start,
             "angle": angle
         }
-        json.dump(dict, file, indent=4)
+        json.dump(dict, file)
         
         file.close()
 
@@ -1148,7 +1212,11 @@ class LSystemFrame(tk.Frame):
         if(file == None):
             return
         
-        info = json.load(file)
+        try:
+            info = json.load(file)
+        except json.decoder.JSONDecodeError:
+            messagebox.showerror("Błąd", "Nieprawidłowy format danych")
+
         self.__rules = info['rules']
         start = info['start']
         angle = info['angle']
@@ -1166,7 +1234,18 @@ class LSystemFrame(tk.Frame):
         for key in self.__rules:
             rulesLabel['text'] += key + " = " + self.__rules[key] + "\n"
 
+    def __saveImageToFile(self):
+        self.__turtle.ht()
+        file = tk.filedialog.asksaveasfile(mode="w", defaultextension=".png", filetypes=[('Image files', '*.png')])
+        canvas = self.__screen.getcanvas()
+        x = canvas.winfo_rootx()
+        y = canvas.winfo_rooty()
+        x1 = x + canvas.winfo_width()
+        y1 = y + canvas.winfo_height()
 
+        ImageGrab.grab().crop((x, y, x1, y1)).save(file.name)
+        self.__turtle.st()
+        
 class ChaosGameFrame(tk.Frame):
     def __init__(self, parent):
 
@@ -1217,8 +1296,8 @@ class ChaosGameFrame(tk.Frame):
         
         rectangle_delete_button = ttk.Button(rectangle_buttons_frame, text = "Usuń prostokąt", command = self.__deleteRectangle)
 
-        save_button = ttk.Button(self, text = "Zapisz", command=self.__saveConfig)
-        load_button = ttk.Button(self, text = "Wczytaj", command=self.__loadConfig)
+        save_button = ttk.Button(canvas_buttons_frame, text = "Zapisz", command=self.__saveConfig)
+        load_button = ttk.Button(canvas_buttons_frame, text = "Wczytaj", command=self.__loadConfig)
 
         #########################################
 
@@ -1232,7 +1311,7 @@ class ChaosGameFrame(tk.Frame):
 
         label_frame.pack(side = tk.TOP, fill = tk.X)
         ttk.Label(label_frame, text = "Iteracje", width = 10, anchor = tk.W).pack(side = tk.LEFT, anchor=tk.W)
-        ttk.Label(label_frame, text = "Dokładność", anchor = tk.W).pack(side = tk.LEFT, anchor=tk.W)
+        ttk.Label(label_frame, text = "Dokładność", anchor = tk.W).pack(side = tk.LEFT, anchor=tk.W, padx = 14)
 
         entry_frame.pack(side =tk.TOP, fill = tk.X)
         iterations_entry.pack(side = tk.LEFT, anchor = tk.W)
@@ -1248,8 +1327,8 @@ class ChaosGameFrame(tk.Frame):
         toolbar.update()
         self.__canvas.get_tk_widget().pack()
 
-        save_button.pack()
-        load_button.pack()
+        save_button.pack(side = tk.LEFT, anchor=tk.W, padx = 12)
+        load_button.pack(side = tk.LEFT, anchor=tk.W)
 
     def __saveConfig(self):
         
@@ -1259,31 +1338,42 @@ class ChaosGameFrame(tk.Frame):
 
         dict = {key: value for key, value in self.__list_of_rectangles.items()}
         
-        info = json.dumps(dict, indent= 4)
+        info = json.dumps(dict)
         file.write(info)
         file.close()
 
-    
     def __loadConfig(self):
 
         file = tk.filedialog.askopenfile(mode="r", defaultextension=".rect", filetypes=[('Fractal files', '*.rect')])
         if(file == None):
             return
-        
-        info = json.load(file)
 
+        self.__draw_canvas.delete("all")
+        self.__list_of_rectangles.clear()
+        
+        try:
+            info = json.load(file)
+    
+            for _, value in info.items():
+                if not( all(isinstance(item, float) for item in value)):
+                    raise json.decoder.JSONDecodeError("", "", 0)
+    
+        except json.decoder.JSONDecodeError:
+            messagebox.showerror("Błąd", "Nieprawidłowy format danych")
+            return
+            
         for _, value in info.items():
             x1, y1, x2, y2, x3, y3, x4, y4 = value
             self.__createRectangle(x1, y1, x2, y2, x3, y3, x4, y4)
 
         file.close()
 
-
     def __onClick(self, event):
         rect_id = self.__draw_canvas.find_withtag("current")[0]
         self.__currentRectangle = rect_id
         self.__drag_data[rect_id] = {"x": event.x, "y": event.y}
         x, y = self.__draw_canvas.coords(rect_id)[0], self.__draw_canvas.coords(rect_id)[1]
+        self.__draw_canvas.tag_raise(rect_id)
         self.__drawDot(x, y)
 
     def __drawDot(self, x, y):
@@ -1353,7 +1443,7 @@ class ChaosGameFrame(tk.Frame):
         delta_x = event.x - self.__drag_data[rect_id]["x"]
         delta_y = event.y - self.__drag_data[rect_id]["y"]
 
-        angle = math.atan2(delta_y, delta_x) * 0.02
+        angle = math.atan2(delta_y, delta_x) * 0.01
 
         pts = self.__draw_canvas.coords(rect_id)
         x1, y1, x2, y2, x3, y3, x4, y4 = pts
@@ -1385,7 +1475,7 @@ class ChaosGameFrame(tk.Frame):
     def __createRectangle(self, x1, y1, x2, y2, x3, y3, x4, y4, width=2):
         outline_color = self.__getRandomColor()
         pts = [(x1, y1), (x2, y2), (x3, y3), (x4, y4)]
-        rect = self.__draw_canvas.create_polygon(pts, outline=outline_color, fill="white", width=width, stipple="gray12")
+        rect = self.__draw_canvas.create_polygon(pts, outline="black", fill="white", width=width, stipple="gray12")
         
         self.__draw_canvas.tag_bind(rect, "<Button-1>", self.__onClick)
         self.__draw_canvas.tag_bind(rect, "<Button-2>", self.__onClick)
@@ -1429,24 +1519,88 @@ class ChaosGameFrame(tk.Frame):
 
         new_points = fractals.rectangle_fractal(width, height, self.__list_of_rectangles, iterations, depth)
 
+        self.__plot1.clear()
         plot(self.__plot1, self.__canvas, points=new_points)
         self.__plot1.axis('off')
 
-def plot(plot1 : Axes, canvas, points : list = None, vertices : list = None):
+#TODO spróbować ogarnąć to okno do zapisywania/wczytywania z pliku
 
-    plot1.clear()
+# class FileWindow(tk.Toplevel):
+#     def __init__(self, dictionary : str, value, mode: bool, master = None):
+        
+#         self.__dictionary = dictionary
+#         self.__chosenValue = value
+#         super().__init__(master = master)
+#         self.title("New Window")
+#         self.geometry("200x200")
+
+#         listbox = tk.Listbox(self, selectmode='single')
+
+#         save_frame = ttk.Frame(self)
+#         load_frame = ttk.Frame(self)
+
+#         ##Save frame
+
+#         nameEntry = ttk.Entry(save_frame)
+#         saveButton = ttk.Button(save_frame, text = "Zapisz")
+
+#         ##Load frame
+
+#         loadButton = ttk.Button(load_frame, text = "Wczytaj")
+#         self.grab_set()
+        
+#         listbox.pack()
+#         self.__printDict(listbox)
+#         listbox.bind('<<ListboxSelect>>', lambda event: self.__onSelect(event))
+
+#     def __printDict(self, listbox: tk.Listbox):
+#         keys = self.__dictionary.keys()
+#         for i in range(len(keys)):
+#             listbox.insert(i, keys[i])
+
+#     def __onSelect(self, event):
+#         w = event.widget
+#         index = w.curselection()[0]
+#         self.__chosenValue.set(w.get(index))
+#         self.grab_release()
+#         self.destroy()
+
+#         value = tk.StringVar()
+#         self.winfo_toplevel().wait_variable(value)
+
+def plot(plot1 : Axes, canvas, points : list = None, vertices : list = None, scaled = False):
+
+    [collection.remove() for collection in plot1.collections]
+    [image.remove() for image in plot1.images]
 
     if(vertices != None and len(vertices) != 0):
-        plot1.scatter(*zip(*vertices), c="b")
+        plot1.scatter(*zip(*vertices), c="y")
     if(points != None and len(points) != 0):
-        img = fractals.draw_image(points)
+
+        xmin = min(points, key=lambda p: p[0])[0]
+        ymin = min(points, key=lambda p: p[1])[1]
+        xmax = max(points, key=lambda p: p[0])[0]
+        ymax = max(points, key=lambda p: p[1])[1]
+
+        if(scaled):
+            img = fractals.draw_image(points, int(xmax-xmin), int(ymax-ymin))
+        else:
+            img = fractals.draw_image(points)
+        img = np.flipud(img)
         image=Image.fromarray(img)
-        plot1.imshow(image, cmap='gist_grey')
+
+        height, width = img.shape
+        xmax = width + xmin
+        ymax = height + ymin
+
+        plot1.imshow(image, cmap='gist_grey', origin = 'lower', extent=(xmin, xmax, ymin, ymax))
+
     canvas.draw()
 
 
 if __name__ == "__main__":
     app = App()
+    app.title("Fraktale")
     app.mainloop()
     
 

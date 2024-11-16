@@ -59,3 +59,10 @@ fractals/lsys/dywan_sierpinskiego.lsys
 test.py
 fractals/rect/trojkat.rect
 
+fractals/rect/dywanSierpinskiego.rect
+__pycache__/fractals.cpython-312.pyc
+image.png
+fractals/frac_new/trojkatsierpinskiego.frac
+test.py
+fractals/frac_new/trojkatDuzy.frac
+fractals/frac_new/trojkatMaly.frac

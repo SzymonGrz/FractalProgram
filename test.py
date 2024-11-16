@@ -430,8 +430,6 @@ def chaos_game_fractal(iterations : int, distance : float, points : list):
 
 def chaos_game_fractal_restricted(iterations : int, jump : float, points: list, condition):
 
-
-    #TODO poprawić. Zamienić x i new_x na punkty
     if(condition == 1):
         points = restricted_fractal(iterations, jump, points, lambda x, new_x : x == new_x)
     elif(condition == 2):
