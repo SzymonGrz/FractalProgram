@@ -66,3 +66,7 @@ fractals/frac_new/trojkatsierpinskiego.frac
 test.py
 fractals/frac_new/trojkatDuzy.frac
 fractals/frac_new/trojkatMaly.frac
+fractals/lsys/mooreCurve.lsys
+fractals/lsys/peanoCurve.lsys
+fractals/lsys/plant.lsys
+mandelbrot_colored.dll

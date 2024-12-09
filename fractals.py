@@ -2,47 +2,58 @@ from __future__ import division
 import random
 import ctypes
 import numpy as np
-from scipy.ndimage import gaussian_filter
 
 def point_distance(a, p, distance: float):
     return (a[0] + (p[0] - a[0]) * (distance), a[1] + (p[1] - a[1])*(distance))
 
-def chaos_game_fractal(iterations : int, distance : float, points : list):
+def list_of_colors(amount):
+    colors = np.random.randint(0, 256, size=(amount, 3))
+    return [tuple(color) for color in colors]
 
-    if len(points) == 0:
-        return []
+def chaos_game_fractal(iterations : int, distance : float, vertices : list):
 
-    number_of_vertices = len(points)
-    j = points[0]
+    if len(vertices) == 0:
+        return [],[]
+
+    number_of_vertices = len(vertices)
+    j = vertices[0]
+    colors = list_of_colors(number_of_vertices)
+    points = []
+    point_colors = []
 
     for i in range(iterations):
         x = random.randint(0, number_of_vertices-1)
-        j = point_distance(points[x], j, 1- distance)
+        j = point_distance(vertices[x], j, 1- distance)
         points.append(j)
+        point_colors.append(colors[x])
 
-    return points
+
+    return points, point_colors
 
 def chaos_game_fractal_restricted(iterations : int, jump : float, points: list, condition):
 
     if(condition == 1):
-        points = restricted_fractal(iterations, jump, points, lambda x, new_x : x == new_x)
+        points, colors = restricted_fractal(iterations, jump, points, lambda x, new_x : x == new_x)
     elif(condition == 2):
-        points = restricted_fractal(iterations, jump, points, lambda x, new_x : (new_x - x == -1) or (new_x == 3 and x == 0))
+        points, colors = restricted_fractal(iterations, jump, points, lambda x, new_x : (new_x - x == -1) or (new_x == 3 and x == 0))
     elif(condition == 3):
-        points = restricted_fractal(iterations, jump, points, 
+        points, colors = restricted_fractal(iterations, jump, points, 
             lambda x, new_x : (new_x - x == 2) or (new_x - x == -2) or (new_x == 3 and x == 1))
         
-    return points
+    return points, colors
 
-def restricted_fractal(iterations : int, jump : float, points: list, condition):
+def restricted_fractal(iterations : int, jump : float, vertices: list, condition):
     
-    if(len(points) == 0):
+    if(len(vertices) == 0):
         return []
     
-    number_of_vertices = len(points)
+    number_of_vertices = len(vertices)
 
-    j = points[0]
+    j = vertices[0]
     x = random.randint(0, number_of_vertices-1)
+    points = []
+    color_list = list_of_colors(number_of_vertices)
+    colors = []
 
     for i in range(iterations):
         new_x = random.randint(0, number_of_vertices-1)
@@ -50,10 +61,11 @@ def restricted_fractal(iterations : int, jump : float, points: list, condition):
             continue
         else:
             x = new_x
-        j = point_distance(points[x], j, jump)
+        j = point_distance(vertices[x], j, jump)
         points.append(j)
+        colors.append(color_list[x])
 
-    return points
+    return points, colors
 
 def affine_fractal(iterations, chances : list, x_transform : list, y_transform : list) :
 
@@ -62,6 +74,8 @@ def affine_fractal(iterations, chances : list, x_transform : list, y_transform :
             return []
 
         points = []
+        colors = list_of_colors(len(chances))
+        point_colors = []
 
         point = (0, 0) #(random.uniform(0, 1), random.uniform(0, 1))
 
@@ -73,11 +87,12 @@ def affine_fractal(iterations, chances : list, x_transform : list, y_transform :
                     point = (x_transform[j][0] * point[0] + x_transform[j][1] * point[1] + x_transform[j][2],
                             y_transform[j][0] * point[0] + y_transform[j][1] * point[1] + y_transform[j][2])
                     points.append(point)
+                    point_colors.append(colors[j])
                     break
         
-        return points
+        return points, point_colors
     except(ValueError, OverflowError):
-        return []
+        return [], []
     
 def mandelbrot_c(width, height, iterations, xmin, xmax, ymin, ymax):
 
@@ -93,12 +108,7 @@ def mandelbrot_c(width, height, iterations, xmin, xmax, ymin, ymax):
                        xmin, xmax, ymin, ymax)
     n3 = output.reshape((height, width))
 
-    normalized = n3 / iterations
-    log_transformed = np.log1p(normalized * (np.e - 1))
-    
-    smoothed = gaussian_filter(log_transformed, sigma=0.5)
-
-    return smoothed
+    return n3
 
 def julia_c(c, width, height, iterations, xmin, xmax, ymin, ymax):
     lib = ctypes.CDLL('./mandelbrot.dll')
@@ -110,15 +120,10 @@ def julia_c(c, width, height, iterations, xmin, xmax, ymin, ymax):
     lib.julia_set(width, height, iterations, c.real, c.imag, output.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
                    xmin, xmax, ymin, ymax)
     n3 = output.reshape((height, width))
-
-    normalized = n3 / iterations
-    log_transformed = np.log1p(normalized * (np.e - 1))
     
-    smoothed = gaussian_filter(log_transformed, sigma=0.5)
-    
-    return smoothed
+    return n3
 
-def draw_image(points : list, width = 500, height = 500) :
+def draw_image(points : list, colors: list = None, width = 500, height = 500) :
 
     points = np.array(points)
 
@@ -130,12 +135,15 @@ def draw_image(points : list, width = 500, height = 500) :
     if y_max == y_min:
         y_max += 1
 
-    image = np.zeros((width, height), dtype=np.uint8)
+    if colors is None:
+        image = np.zeros((height, width), dtype=np.uint8)
+    else:
+        image = np.zeros((height, width, 3), dtype=np.uint8)
+        colors = np.array(colors)
 
     image_height = height-1
     image_width = width-1
 
-    
     scale_x = image_width / (x_max - x_min)
     scale_y = image_height / (y_max - y_min)
 
@@ -143,13 +151,19 @@ def draw_image(points : list, width = 500, height = 500) :
     points[:, 1] = (points[:, 1] - y_min) * scale_y
 
     points = np.round(points).astype(int)
-    points[:, 1] = image_height - 1 - points[:, 1]
+    # points[:, 1] = image_height - 1 - points[:, 1]
 
-    valid_points = (points[:, 0] >= 0) & (points[:, 0] < image_width) & \
-               (points[:, 1] >= 0) & (points[:, 1] < image_height)
+    valid_points = (points[:, 0] >= 0) & (points[:, 0] < image.shape[1]) & \
+               (points[:, 1] >= 0) & (points[:, 1] < image.shape[0])
     points = points[valid_points]
 
-    image[points[:, 1], points[:, 0]] = 255
+    if colors is not None:
+        colors = colors[valid_points]
+
+    if colors is None:
+        image[points[:, 1], points[:, 0]] = 255
+    else:
+        image[points[:, 1], points[:, 0]] = colors
 
     return image
 
@@ -202,12 +216,11 @@ def l_system_fractal(axiom: str, rules: dict, iterations: int):
 
     return route
 
-def rectangle_fractal(width: int, height : int, list_of_rectangles: dict, iterations : int, depth: int):
-    
+def rectangle_fractal(width: int, height : int, list_of_rectangles: dict, iterations : int, depth: int, color_level: int):
 
     main_rectangle = np.array([[0, 0], [0, height],[width, height] ,[width, 0]])
     src = np.array(main_rectangle)
-    src_homogeneous = np.hstack([src, np.ones((src.shape[0], 1))])
+    src = np.hstack([src, np.ones((src.shape[0], 1))])
 
     function_list = []
 
@@ -215,13 +228,11 @@ def rectangle_fractal(width: int, height : int, list_of_rectangles: dict, iterat
         for rect in list_of_rectangles.values():
             dst_i = [rect[i:i + 2] for i in range(0, len(rect), 2)]
             dst = np.array(dst_i)
-            transformation_matrix, _, _, _ = np.linalg.lstsq(src_homogeneous, dst, rcond=None)
+            transformation_matrix, _, _, _ = np.linalg.lstsq(src, dst, rcond=None)
             a, b = transformation_matrix[0]
             c, d = transformation_matrix[1]
             e, f = transformation_matrix[2]
             function_list.append([a, b, c, d, e, f])
-
-    new_points = []
 
     points = np.column_stack((
         np.random.uniform(0, width, iterations),
@@ -229,7 +240,10 @@ def rectangle_fractal(width: int, height : int, list_of_rectangles: dict, iterat
     ))
 
     function_array = np.array(function_list)
+    color_list = list_of_colors(len(function_list))
+    color_array = np.array(color_list)
 
+    colors = np.empty(3)
     for j in range(depth):
 
         func_indices = np.random.randint(0, len(function_array), iterations)
@@ -242,12 +256,14 @@ def rectangle_fractal(width: int, height : int, list_of_rectangles: dict, iterat
         e = selected_functions[:, 4]
         f = selected_functions[:, 5]
 
-
         new_x = a * points[:, 0] + b * points[:, 1] + e
         new_y = height - (c * points[:, 0] + d * points[:, 1] + f)
-        
+
         points = np.column_stack((new_x, new_y))
 
-    return points.tolist()
+        if j == depth - color_level:
+            colors = color_array[func_indices]
+
+    return points.tolist(), colors.tolist()
 
 
