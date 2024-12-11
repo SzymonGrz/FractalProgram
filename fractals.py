@@ -135,6 +135,11 @@ def draw_image(points : list, colors: list = None, width = 500, height = 500) :
     if y_max == y_min:
         y_max += 1
 
+    if height == 0:
+        height += 2
+    if width == 0:
+        width += 2
+
     if colors is None:
         image = np.zeros((height, width), dtype=np.uint8)
     else:
@@ -151,7 +156,6 @@ def draw_image(points : list, colors: list = None, width = 500, height = 500) :
     points[:, 1] = (points[:, 1] - y_min) * scale_y
 
     points = np.round(points).astype(int)
-    # points[:, 1] = image_height - 1 - points[:, 1]
 
     valid_points = (points[:, 0] >= 0) & (points[:, 0] < image.shape[1]) & \
                (points[:, 1] >= 0) & (points[:, 1] < image.shape[0])
