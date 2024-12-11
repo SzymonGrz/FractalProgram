@@ -318,6 +318,7 @@ class AffineFractalFrame(tk.Frame):
         self.__x_transform = []
         self.__y_transform = []
         self.__last_iterations_number = 0
+        self.__changed_index = -1
 
         color_choice = tk.BooleanVar()
         color_choice.set(False)
@@ -346,24 +347,25 @@ class AffineFractalFrame(tk.Frame):
         iterations_entry = ttk.Entry(iter_frame, validate="all", validatecommand=(vcmd, "%P"))
         draw_button = ttk.Button(canvas_buttons_frame, text="Rysuj", 
                                 command=lambda: self.__plotFractal(plot1, canvas, iterations_entry.get(), color_choice.get()))
-        chance_entry = ttk.Entry(percentage_frame)
+        self.__chance_entry = ttk.Entry(percentage_frame)
 
-        clear_button = ttk.Button(canvas_buttons_frame, text="Wyczyść", command=lambda : self.__clearPlot(plot1, canvas, function_label, iterations_entry))
+        clear_button = ttk.Button(canvas_buttons_frame, text="Wyczyść", command=lambda : self.__clearPlot(plot1, canvas, list_frame, iterations_entry))
         save_button = ttk.Button(canvas_buttons_frame, text = "Zapisz", command=lambda : self.__saveConfig())
-        load_button = ttk.Button(canvas_buttons_frame, text = "Wczytaj", command=lambda : self.__loadConfig(plot1, canvas, function_label, iterations_entry))
+        load_button = ttk.Button(canvas_buttons_frame, text = "Wczytaj", command=lambda : self.__loadConfig(plot1, canvas, list_frame, iterations_entry))
         
-        x_entry_1 = ttk.Entry(x_entry_frame, width = 10)
-        x_entry_2 = ttk.Entry(x_entry_frame, width = 10)
-        x_entry_3 = ttk.Entry(x_entry_frame, width = 10)
+        self.__x_entry_1 = ttk.Entry(x_entry_frame, width = 10)
+        self.__x_entry_2 = ttk.Entry(x_entry_frame, width = 10)
+        self.__x_entry_3 = ttk.Entry(x_entry_frame, width = 10)
 
-        y_entry_1 = ttk.Entry(y_entry_frame, width = 10)
-        y_entry_2 = ttk.Entry(y_entry_frame, width = 10)
-        y_entry_3 = ttk.Entry(y_entry_frame, width = 10)
+        self.__y_entry_1 = ttk.Entry(y_entry_frame, width = 10)
+        self.__y_entry_2 = ttk.Entry(y_entry_frame, width = 10)
+        self.__y_entry_3 = ttk.Entry(y_entry_frame, width = 10)
 
-        function_add_button = ttk.Button(function_add_frame, text="Dodaj", command = lambda : [self.__addFunction(
-            chance_entry.get(), x_entry_1.get(), x_entry_2.get(), x_entry_3.get(),
-            y_entry_1.get(), y_entry_2.get(), y_entry_3.get(), function_label
-        ), self.__clearEntries(chance_entry, x_entry_1, x_entry_2, x_entry_3, y_entry_1, y_entry_2, y_entry_3)])
+        function_add_button = ttk.Button(function_add_frame, text="Dodaj", command = lambda : [self.__addFunction(list_frame
+        ), self.__clearEntries()])
+
+        function_delete_button = ttk.Button(function_add_frame, text = "Usuń", command = lambda : [self.__deleteFunction(list_frame
+        ), self.__clearEntries()])
 
         
         def __scroll(event):
@@ -371,7 +373,6 @@ class AffineFractalFrame(tk.Frame):
 
         list_canvas = tk.Canvas(list_outer_frame, width=200, height = 230)
         list_frame = ttk.Frame(list_canvas, width=200, height = 230)
-        function_label = ttk.Label(list_frame, text="")
         scrollbar = ttk.Scrollbar(list_outer_frame, command=list_canvas.yview)
         list_canvas.configure(yscrollcommand=scrollbar.set)
         list_canvas.create_window((0, 0), window=list_frame, anchor='nw')
@@ -397,7 +398,7 @@ class AffineFractalFrame(tk.Frame):
 
         percentage_frame.pack(side = tk.TOP, fill = 'x', pady = 5)
         ttk.Label(percentage_frame, text="Szansa", width = 20, anchor = tk.W).pack(side = tk.LEFT, anchor=tk.W)
-        chance_entry.pack(side = tk.LEFT)
+        self.__chance_entry.pack(side = tk.LEFT)
 
         x_label_frame.pack(side = tk.TOP, fill = 'x', pady = (5, 0))
         ttk.Label(x_label_frame, text = "a", width = 10, anchor = tk.W).pack(side = tk.LEFT)
@@ -405,9 +406,9 @@ class AffineFractalFrame(tk.Frame):
         ttk.Label(x_label_frame, text = "e", width = 10, anchor = tk.W).pack(side = tk.LEFT)
 
         x_entry_frame.pack(side = tk.TOP, fill = 'x')
-        x_entry_1.pack(side = tk.LEFT, anchor = tk.W)
-        x_entry_2.pack(side = tk.LEFT, anchor = tk.W, padx = 12)
-        x_entry_3.pack(side = tk.LEFT, anchor = tk.W, padx = 1)
+        self.__x_entry_1.pack(side = tk.LEFT, anchor = tk.W)
+        self.__x_entry_2.pack(side = tk.LEFT, anchor = tk.W, padx = 12)
+        self.__x_entry_3.pack(side = tk.LEFT, anchor = tk.W, padx = 1)
 
         y_label_frame.pack(side = tk.TOP, fill = 'x', pady=(10, 0))
         ttk.Label(y_label_frame, text = "c", width = 10, anchor = tk.W).pack(side = tk.LEFT)
@@ -415,12 +416,13 @@ class AffineFractalFrame(tk.Frame):
         ttk.Label(y_label_frame, text = "f", width = 10, anchor = tk.W).pack(side = tk.LEFT)
 
         y_entry_frame.pack(side = tk.TOP, fill = 'x')
-        y_entry_1.pack(side = tk.LEFT, anchor = tk.W)
-        y_entry_2.pack(side = tk.LEFT, anchor = tk.W, padx = 12)
-        y_entry_3.pack(side = tk.LEFT, anchor = tk.W, padx = 1)
+        self.__y_entry_1.pack(side = tk.LEFT, anchor = tk.W)
+        self.__y_entry_2.pack(side = tk.LEFT, anchor = tk.W, padx = 12)
+        self.__y_entry_3.pack(side = tk.LEFT, anchor = tk.W, padx = 1)
 
         function_add_frame.pack(side = tk.TOP, fill = 'x', pady = 15)
         function_add_button.pack(side = tk.LEFT, anchor = tk.W)
+        function_delete_button.pack(side = tk.LEFT, anchor = tk.W, padx = 10)
 
         iter_frame.pack(side = tk.TOP, fill = 'x')
         ttk.Label(iter_frame, text='Iteracje', width = 20, anchor= tk.W).pack(side = tk.LEFT)
@@ -438,7 +440,6 @@ class AffineFractalFrame(tk.Frame):
 
         list_outer_frame.pack(side = tk.TOP, fill = 'x', pady = 10)
         list_canvas.pack(side = tk.LEFT)
-        function_label.pack(side=tk.LEFT)
         scrollbar.pack(side = tk.LEFT, fill = 'y', anchor = tk.W)
 
         canvas_frame.pack(side=tk.RIGHT, pady = 10, padx = 50)
@@ -453,7 +454,20 @@ class AffineFractalFrame(tk.Frame):
         else:
             return False
         
-    def __addFunction(self, chance : str , x1 : str, x2 : str, x3 : str, y1 : str, y2 : str, y3 : str, label: tk.Label) :
+    def __addFunction(self, frame) :
+
+        if self.__changed_index >= 0:
+            self.__chances.pop(self.__changed_index)
+            self.__x_transform.pop(self.__changed_index)
+            self.__y_transform.pop(self.__changed_index)
+
+        chance = self.__chance_entry.get()
+        x1 = self.__x_entry_1.get()
+        x2 = self.__x_entry_2.get()
+        x3 = self.__x_entry_3.get()
+        y1 = self.__y_entry_1.get()
+        y2 = self.__y_entry_2.get()
+        y3 = self.__y_entry_3.get()
 
         try:
             self.__addChances(chance)
@@ -476,18 +490,38 @@ class AffineFractalFrame(tk.Frame):
             messagebox.showerror("Nieprawidłowa wartość", "c, d, f, muszą być liczbami")
             return
 
-        self.__updateLabel(label)
+        self.__refreshFunctionLabel(frame)
+        self.__changed_index = -1
+
+    def __deleteFunction(self, frame):
+
+        if self.__changed_index == -1:
+            return
+        
+        self.__chances.pop(self.__changed_index)
+        self.__x_transform.pop(self.__changed_index)
+        self.__y_transform.pop(self.__changed_index)
+
+        self.__refreshFunctionLabel(frame)
+        self.__changed_index = -1
+        
         
     def __clearEntries(self, *args):
         
-        for entry in args:
-            entry.delete(0, tk.END)
+        self.__chance_entry.delete(0, tk.END)
+        self.__x_entry_1.delete(0, tk.END)
+        self.__x_entry_2.delete(0, tk.END)
+        self.__x_entry_3.delete(0, tk.END)
+        self.__y_entry_1.delete(0, tk.END)
+        self.__y_entry_2.delete(0, tk.END)
+        self.__y_entry_3.delete(0, tk.END)
         
 
     def __clearLists(self):
         self.__chances = []
         self.__x_transform = []
         self.__y_transform = []
+        self.__changed_index = -1
     
     def __plotFractal(self, plot1, canvas, iterationsString : str, color: bool):
         
@@ -517,11 +551,15 @@ class AffineFractalFrame(tk.Frame):
             plot(plot1, canvas, points = points)
         plot1.axis('off')
 
-    def __clearPlot(self, plot1, canvas, label: tk.Label, iterEntry : tk.Entry):
+    def __clearPlot(self, plot1, canvas, frame: tk.Frame, iterEntry : tk.Entry):
         plot(plot1, canvas)
         self.__clearLists()
-        label.config(text = "")
+        self.__clearFrames(frame)
         iterEntry.delete(0, tk.END)
+
+    def __clearFrames(self, frame):
+        for widget in frame.winfo_children():
+            widget.destroy()
     
     def __addChances(self, chanceString: str) :
 
@@ -540,16 +578,6 @@ class AffineFractalFrame(tk.Frame):
 
         self.__chances.append(chance)
     
-    def __updateLabel(self, functionLabel: tk.Label):
-        
-        last_chance = self.__chances[-1]
-        last_x = self.__x_transform[-1]
-        last_y = self.__y_transform[-1]
-
-        functionLabel['text'] += " x = " + str(last_x[0]) +"x " + "%+.2f" % last_x[1] + "y " + "%+ .2f" % last_x[2] + "\n"
-        functionLabel['text'] += " y = " + str(last_y[0]) +"x " +"%+.2f" % last_y[1] + "y " + "%+ .2f" % last_y[2] + "\n"
-        functionLabel['text'] += "Szansa na wystąpienie: " + str(last_chance) + "%\n\n"
-
     def __saveConfig(self):
         file = tk.filedialog.asksaveasfile(mode="w", defaultextension=".ifs", filetypes=[('Fractal files', '*.ifs')])
         if(file is None):
@@ -565,11 +593,11 @@ class AffineFractalFrame(tk.Frame):
         file.write(info)
         file.close()
 
-    def __loadConfig(self, plot1, canvas, label : tk.Label, iterEntry : tk.Entry):
+    def __loadConfig(self, plot1, canvas, functionFrame : tk.Frame, iterEntry : tk.Entry):
         file = tk.filedialog.askopenfile(mode="r", defaultextension=".ifs", filetypes=[('Fractal files', '*.ifs')])
         if(file is None):
             return
-        self.__clearPlot(plot1, canvas, label, iterEntry)
+        self.__clearPlot(plot1, canvas, functionFrame, iterEntry)
 
         try:
             info = json.load(file)
@@ -593,21 +621,48 @@ class AffineFractalFrame(tk.Frame):
         self.__x_transform = info['x_transform']
         self.__y_transform = info['y_transform']
         self.__last_iterations_number = info['iterations']
-        self.__refreshFunctionLabel(label)
+        self.__refreshFunctionLabel(functionFrame)
 
         iterEntry.delete(0, tk.END)
         iterEntry.insert(0, str(self.__last_iterations_number))
 
-    def __refreshFunctionLabel(self, functionLabel: tk.Label):
-        functionLabel['text'] = ""
+    def __refreshFunctionLabel(self, functionFrame: tk.Frame):
+        
+        self.__clearFrames(functionFrame)
 
         for i in range(len(self.__chances)):
             chance = self.__chances[i]
             x = self.__x_transform[i]
             y = self.__y_transform[i]
+
+            functionLabel = tk.Label(functionFrame)
             functionLabel['text'] += " x = " + str(x[0]) +"x " + "%+.2f" % x[1] + "y " + "%+ .2f" % x[2] + "\n"
             functionLabel['text'] += " y = " + str(y[0]) +"x " +"%+.2f" % y[1] + "y " + "%+ .2f" % y[2] + "\n"
-            functionLabel['text'] += "Szansa na wystąpienie: " + str(chance) + "%\n\n"
+            functionLabel['text'] += "Szansa na wystąpienie: " + str(chance)
+
+            functionLabel.pack(fill="x", padx=10, pady=2)
+
+            functionLabel.bind("<Button-1>", lambda e, label = functionLabel, index = i: self.__editFunction(index, label))
+
+    def __editFunction(self, index, label: tk.Label):
+        bg = label.cget("bg")
+        label.config(bg="lightblue")
+        self.__restoreEntries(index)
+
+        label.after(500, lambda: label.config(bg=bg))
+
+    def __restoreEntries(self, index):
+        self.__clearEntries()
+        self.__chance_entry.insert(0, self.__chances[index])
+        x_transform = self.__x_transform[index]
+        self.__x_entry_1.insert(0, x_transform[0])
+        self.__x_entry_2.insert(0, x_transform[1])
+        self.__x_entry_3.insert(0, x_transform[2])
+        y_transform = self.__y_transform[index]
+        self.__y_entry_1.insert(0, y_transform[0])
+        self.__y_entry_2.insert(0, y_transform[1])
+        self.__y_entry_3.insert(0, y_transform[2])
+        self.__changed_index = index
 
 
 class MandelJuliaFrame(tk.Frame) :
@@ -1030,7 +1085,6 @@ class LibraryFrame(tk.Frame):
         self.__instruction_frame.pack(side = tk.LEFT, fill = 'y', pady = 20)
         plot(plot1, canvas, points = points)
 
-#TODO POPRAWIĆ TEN DZIWNY WYJĄTEK I DODAĆ JAKIEŚ ZAWIJANIE TEKSTU I ŻÓŁW NIE ZAWSZE POPRAWNIE PRZESTAJE RYSOWAĆ
 class LSystemFrame(tk.Frame):
     def __init__(self, parent):
 
@@ -1155,13 +1209,8 @@ class LSystemFrame(tk.Frame):
             messagebox.showerror("Błąd", "Zmiennymi nie mogą być znaki +, -, [, ]")
             return
 
-
-        if variable in self.__rules:
-            messagebox.showerror("Błąd", "Dla tej zmiennej istnieje już reguła")
-            return
-
         self.__rules[variable] = rule
-        label['text'] += variable + " = " + rule + "\n"
+        self.__refreshRulesLabel(label)
 
     def __drawTurtle(self, rules, axiom, angle_str, length, iterations):
         
@@ -1255,7 +1304,7 @@ class LSystemFrame(tk.Frame):
 
     def __clearRules(self, label: tk.Label):
         self.__rules.clear()
-        label['text'] = ""
+        self.__refreshRulesLabel(label)
 
     def __stopTurtle(self):
         self.__turtle_running = False
@@ -1317,6 +1366,10 @@ class LSystemFrame(tk.Frame):
             rulesLabel['text'] += key + " = " + self.__rules[key] + "\n"
 
     def __saveImageToFile(self):
+
+        if self.winfo_toplevel().state() != "zoomed":
+            messagebox.showerror("Błąd", "Zmaksymalizuj okno programu")
+            return
 
         file = tk.filedialog.asksaveasfile(mode="w", defaultextension=".png", filetypes=[('Image files', '*.png')])
         if file is None: 
@@ -1625,51 +1678,6 @@ class ChaosGameFrame(tk.Frame):
         self.__plot1.axis('off')
 
 #TODO prostokąt sie przykleił do myszki z jakiegoś powodu
-
-#TODO spróbować ogarnąć to okno do zapisywania/wczytywania z pliku
-
-# class FileWindow(tk.Toplevel):
-#     def __init__(self, dictionary : str, value, mode: bool, master = None):
-        
-#         self.__dictionary = dictionary
-#         self.__chosenValue = value
-#         super().__init__(master = master)
-#         self.title("New Window")
-#         self.geometry("200x200")
-
-#         listbox = tk.Listbox(self, selectmode='single')
-
-#         save_frame = ttk.Frame(self)
-#         load_frame = ttk.Frame(self)
-
-#         ##Save frame
-
-#         nameEntry = ttk.Entry(save_frame)
-#         saveButton = ttk.Button(save_frame, text = "Zapisz")
-
-#         ##Load frame
-
-#         loadButton = ttk.Button(load_frame, text = "Wczytaj")
-#         self.grab_set()
-        
-#         listbox.pack()
-#         self.__printDict(listbox)
-#         listbox.bind('<<ListboxSelect>>', lambda event: self.__onSelect(event))
-
-#     def __printDict(self, listbox: tk.Listbox):
-#         keys = self.__dictionary.keys()
-#         for i in range(len(keys)):
-#             listbox.insert(i, keys[i])
-
-#     def __onSelect(self, event):
-#         w = event.widget
-#         index = w.curselection()[0]
-#         self.__chosenValue.set(w.get(index))
-#         self.grab_release()
-#         self.destroy()
-
-#         value = tk.StringVar()
-#         self.winfo_toplevel().wait_variable(value)
 
 def plot(plot1 : Axes, canvas, points : list = None, vertices : list = None, colors : list = None, scaled = False):
 
