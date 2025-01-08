@@ -44,31 +44,30 @@ def julia_c(c, width, height):
 
 def mandelbrot():
 
-    x,y=np.ogrid[-2:1:5000j,-1.5:1.5:5000j]
+    x,y=np.ogrid[-2:2:2000j,-2:2:2000j]
 
     z  = 0
     c  = x + y * 1j
 
-    iterations  = 40
+    iterations  = 20
     
     for g in range(iterations):
         z=z**2 + c
 
     mask = np.abs(z) < 2
 
-    # img = Image.fromarray(mask, 'L')
+    img = Image.fromarray(mask, 'L')
 
-    #plt.imshow(mask.T,extent=[-2,1,-1.5,1.5])
+    # plt.imshow(mask.T,extent=[-2,1,-1.5,1.5])
 
     # plt.gray()
-    #plt.show()
+    # plt.show()
     # img.show()
 
 def mandelbrot_colored(size, iterations) :
 
     y,x=np.ogrid[-2:2:size *1j,-2:2:size*1j]
 
-    z_array  = np.array(size * size)
     c  = x + y * 1j
 
     max_iterations = iterations
@@ -83,39 +82,38 @@ def mandelbrot_colored(size, iterations) :
                 if z * np.conj(z) > 4:
                     iterations_until_divergence[h][w] = i
                     break
-    plt.imshow(iterations_until_divergence, cmap=cm.gnuplot2)
-    plt.show()
+    # plt.imshow(iterations_until_divergence, cmap=cm.gnuplot2)
+    # plt.show()
                  
 def mandelbrot2():
     x = -2
-    y = -1.5
+    y = -2
 
     points_x = []
     points_y = []
 
-    epsilon = 0.001
-    maxiterations = 40
+    epsilon = 0.002
+    maxiterations = 20
 
-    while x < 1:
-        while y < 1.5:
+    while x < 2:
+        while y < 2:
             z_real = 0
             z_imag = 0
             c_real = x
             c_imag = y
-            # iterations = 0
             for i in range(maxiterations):
                 z_real2 = z_real*z_real - z_imag*z_imag + c_real
                 z_imag = 2 * z_real* z_imag + c_imag
                 z_real = z_real2
-                # iterations += 1 
-            if(z_real*z_real+z_imag*z_imag < 4):
-                points_x.append(c_real)
-                points_y.append(c_imag)
+                if(z_real*z_real+z_imag*z_imag < 4):
+                    points_x.append(c_real)
+                    points_y.append(c_imag)
+                    break
             y += epsilon
         x += epsilon
         y = -2
 
-    return(points_x, points_y)
+    # return(points_x, points_y)
     # plt.scatter(points_x, points_y, s=0.5)
     # plt.show()
 
@@ -271,16 +269,16 @@ def sierpinski_triangle_ifs(iterations):
             iter = 3**j
 
 
-    points_x = []
-    points_y = []
+    # points_x = []
+    # points_y = []
 
-    for p in points:
-        points_x.append(p[0])
-        points_y.append(p[1])
+    # for p in points:
+    #     points_x.append(p[0])
+    #     points_y.append(p[1])
 
-    plt.scatter(points_x, points_y)
-    plt.show()
-    return
+    # plt.scatter(points_x, points_y)
+    # plt.show()
+    return points
 
 # def point_on_triangle(pt1, pt2, pt3):
 #     """
@@ -328,8 +326,8 @@ def sierpinski_triangle_chaos(iterations: int):
         points_x.append(p[0])
         points_y.append(p[1])
 
-    plt.scatter(points_x, points_y)
-    plt.show()
+    # plt.scatter(points_x, points_y)
+    # plt.show()
 
 def sierpinski_square_chaos(iterations):
     a = (0, 0)
@@ -827,27 +825,49 @@ def main():
     # plt.grid()
     # plt.show()
 
-    import fractals_c
-    import fractals
+    # import functions.fractals as fractals
 
-    # Lista punktów
-    points = [(0.0, 0.0), (1.0, 1.0), (0.5, 1.5)]  # Każdy punkt to krotka (x, y)
+    # # Lista punktów
+    # points = [(0.0, 0.0), (1.0, 1.0), (0.5, 1.5)]  # Każdy punkt to krotka (x, y)
 
-    # Liczba iteracji i dystans
-    iterations = 1000000
-    distance = 0.5
+    # # Liczba iteracji i dystans
+    # iterations = 1000000
+    # distance = 0.5
 
-    # Wywołanie funkcji z trzema argumentami
+    # # Wywołanie funkcji z trzema argumentami
+
+    # start = time.time()
+    # result = fractals.chaos_game_fractal(iterations, distance, points)
+    # stop = time.time()
+    # print(stop - start)
+
+    # start = time.time()
+    # mandelbrot()
+    # stop = time.time()
+    # print("1 " + str(stop-start))
+
+    # start = time.time()
+    # mandelbrot_colored(2000, 20)
+    # stop = time.time()
+    # print("2 " + str(stop-start))
+
+    # start = time.time()
+    # mandelbrot2()
+    # stop = time.time()
+    # print("3 " + str(stop-start))
+
+    from functions.fractals import mandelbrot_c
+    from functions.fractals import draw_image
 
     start = time.time()
-    result = fractals.chaos_game_fractal(iterations, distance, points)
+    points = sierpinski_triangle_ifs(10)
+    print(len(points))
+    image = draw_image(points)
+    plt.imshow(image)
     stop = time.time()
-    print(stop - start)
+    print("3 " + str(stop-start))
 
-    start = time.time()
-    result = fractals_c.chaos_game_fractal(iterations, distance, points)
-    stop = time.time()
-    print(stop - start)
+    plt.show()
 
     
 if __name__ == '__main__':
