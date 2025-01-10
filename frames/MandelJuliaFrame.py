@@ -11,6 +11,7 @@ from scipy import ndimage
 
 import functions.fractals as fractals
 from functions.image_functions import plot, save_image
+from functions.VerticalNavigationToolbar2tk import VerticalNavigationToolbar2Tk
 
 class MandelJuliaFrame(tk.Frame) :
     def __init__(self, parent):
@@ -48,7 +49,7 @@ class MandelJuliaFrame(tk.Frame) :
         c_real_entry = ttk.Entry(entry_frame, width = 10)
         c_imag_entry = ttk.Entry(entry_frame, width = 10)
 
-        fig = Figure(figsize = (6, 6), dpi = 100)
+        fig = Figure(figsize = (7, 7), dpi = 100)
         self.__plot = fig.add_subplot(111)
         self.__plot.set_xlim(self.__xmin, self.__xmax)
         self.__plot.set_ylim(self.__ymin, self.__ymax)
@@ -56,7 +57,7 @@ class MandelJuliaFrame(tk.Frame) :
         fig.subplots_adjust(0, 0, 1, 1)
         canvas_frame = ttk.Frame(self)
         canvas = FigureCanvasTkAgg(fig, master = canvas_frame)
-        toolbar = NavigationToolbar2Tk(canvas, canvas_frame) 
+        toolbar = VerticalNavigationToolbar2Tk(canvas, self) 
         toolbar.update()
 
         home = toolbar.home
@@ -100,8 +101,9 @@ class MandelJuliaFrame(tk.Frame) :
         draw_button.pack(side = tk.LEFT, anchor = tk.W)
         clear_button.pack(side = tk.LEFT, anchor = tk.W, padx = 10)
 
-        canvas_frame.pack(side=tk.RIGHT,anchor=tk.W, pady = 10, padx = 50)
+        canvas_frame.pack(side=tk.LEFT,anchor=tk.W, pady = 10, padx = (50, 0))
         canvas.get_tk_widget().pack()
+        toolbar.pack(side=tk.LEFT, fill=tk.Y)
 
         ############################################################
 
