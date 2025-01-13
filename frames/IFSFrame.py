@@ -39,6 +39,7 @@ class IFSFrame(tk.Frame):
         canvas_buttons_frame = ttk.Frame(widgets_frame)
         list_outer_frame = ttk.Frame(widgets_frame)
         color_frame = ttk.Frame(widgets_frame)
+        example_frame = ttk.Frame(widgets_frame)
 
 
         button = ttk.Button(back_button_frame, text="Powrót",
@@ -88,6 +89,9 @@ class IFSFrame(tk.Frame):
 
         color_check = ttk.Checkbutton(color_frame, variable= color_choice)
 
+        load_exanmple_button = ttk.Button(example_frame, text = "Przykład", 
+            command = lambda: self.__loadExample(plot1, canvas, iterations_entry, list_frame))
+
         #########################################
 
         widgets_frame.pack(side=tk.LEFT, fill='y', anchor = tk.NW, padx=10, pady = 5)
@@ -136,6 +140,9 @@ class IFSFrame(tk.Frame):
         clear_button.pack(side = tk.LEFT, padx = 10)
         save_button.pack(side = tk.LEFT)
         load_button.pack(side = tk.LEFT, padx = 10)
+
+        example_frame.pack(side = tk.TOP, fill = 'x')
+        load_exanmple_button.pack(side = tk.LEFT, anchor = tk.W)
 
         list_outer_frame.pack(side = tk.TOP, fill = 'x', pady = 10)
         list_canvas.pack(side = tk.LEFT)
@@ -363,3 +370,21 @@ class IFSFrame(tk.Frame):
         self.__y_entry_2.insert(0, y_transform[1])
         self.__y_entry_3.insert(0, y_transform[2])
         self.__changed_index = index
+
+    def __loadExample(self, plot1, canvas, iterEntry, functionFrame):
+        
+        self.__clearPlot(plot1, canvas, functionFrame, iterEntry)
+
+        info = {"chances": [1.0, 85.0, 7.0, 7.0], 
+                "x_transform": [[0.0, 0.0, 0.0], [0.85, 0.04, 0.0], [0.2, -0.26, 0.0], [-0.15, 0.28, 0.0]], 
+                "y_transform": [[0.0, 0.16, 0.0], [-0.04, 0.85, 1.6], [0.23, 0.22, 1.6], [0.26, 0.24, 0.44]], 
+        "iterations": 100000}
+
+        self.__chances = info['chances']
+        self.__x_transform = info['x_transform']
+        self.__y_transform = info['y_transform']
+        self.__last_iterations_number = info['iterations']
+        self.__refreshFunctionLabel(functionFrame)
+
+        iterEntry.delete(0, tk.END)
+        iterEntry.insert(0, str(self.__last_iterations_number))

@@ -29,6 +29,7 @@ class MandelJuliaFrame(tk.Frame) :
         entry_label_frame = ttk.Frame(widgets_frame)
         entry_frame = ttk.Frame(widgets_frame)
         canvas_button_frame = ttk.Frame(widgets_frame)
+        example_frame = ttk.Frame(widgets_frame)
 
         button = ttk.Button(widgets_frame, text="Powrót",
                            command=lambda: parent.switch_frame("start"))
@@ -81,6 +82,8 @@ class MandelJuliaFrame(tk.Frame) :
         toolbar.winfo_children()[2].configure(command=newForward)
         toolbar.winfo_children()[7].configure(command=lambda: save_image(self.__plot))
 
+        load_example_button = ttk.Button(example_frame, text = "Przykład", command= lambda : self.__loadExample(c_real_entry, c_imag_entry))
+
         ###########################################################
 
         widgets_frame.pack(side=tk.LEFT, fill='y', anchor = tk.NW, padx=10, pady = 10)
@@ -100,6 +103,9 @@ class MandelJuliaFrame(tk.Frame) :
         canvas_button_frame.pack(side = tk.TOP, pady = 10, fill='x')
         draw_button.pack(side = tk.LEFT, anchor = tk.W)
         clear_button.pack(side = tk.LEFT, anchor = tk.W, padx = 10)
+
+        example_frame.pack(side = tk.TOP, fill = 'x')
+        load_example_button.pack(side = tk.LEFT, anchor = tk.W)
 
         canvas_frame.pack(side=tk.LEFT,anchor=tk.W, pady = 10, padx = (50, 0))
         canvas.get_tk_widget().pack()
@@ -164,4 +170,11 @@ class MandelJuliaFrame(tk.Frame) :
             self.__xmax = 2.0
             self.__ymin = -2.0
             self.__ymax = 2.0
+
+    def __loadExample(self, c_real_entry : ttk.Entry, c_imag_entry : ttk.Entry):
+        c_real_entry.delete(0, tk.END)
+        c_imag_entry.delete(0, tk.END)
+        c_real_entry.insert(0, "0.123") 
+        c_imag_entry.insert(0, "0.7") 
+
 

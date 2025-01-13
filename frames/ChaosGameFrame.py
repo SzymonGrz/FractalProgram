@@ -43,6 +43,7 @@ class ChaosGameFrame(tk.Frame):
         color_frame = ttk.Frame(widgets_frame)
         list_outer_frame = ttk.Frame(widgets_frame)
         list_frame = ttk.Frame(list_outer_frame)
+        example_frame = ttk.Frame(widgets_frame)
 
         canvas_frame = tk.Frame(self)
 
@@ -93,6 +94,9 @@ class ChaosGameFrame(tk.Frame):
         list_canvas.create_window((0, 0), window=list_frame, anchor='nw')
         list_frame.bind("<Configure>", __scroll)
 
+        load_example_button = ttk.Button(example_frame, text = "Przykład",
+            command = lambda: self.__loadExample(plot1, canvas, iterations_entry, jump_entry, list_frame))
+
         ####################################
 
         widgets_frame.pack(side=tk.LEFT, fill='y', anchor = tk.NW, padx=10, pady = 5)
@@ -129,15 +133,8 @@ class ChaosGameFrame(tk.Frame):
         save_button.pack(side = tk.LEFT)
         load_button.pack(side = tk.LEFT, padx = 10)
 
-        # restrictions_frame.pack(side = tk.TOP, fill='x')
-        # ttk.Label(restrictions_frame, text="Ograniczenia (Zwróć uwagę na kolejność dodawania wierzchołków)", wraplength=200).pack(side = tk.TOP, pady = 5, anchor=tk.W)
-        # tk.Radiobutton(restrictions_frame, text="Brak", variable=restriction_choice, value=0, wraplength=200).pack(side = tk.TOP, anchor=tk.W)
-        # tk.Radiobutton(restrictions_frame, text="Następny losowy wierzchołek musi być inny niż poprzedni",
-        #                variable=restriction_choice, value=1, wraplength=200).pack(side = tk.TOP, anchor=tk.W)
-        # tk.Radiobutton(restrictions_frame, text="Następny wierzchołek nie może być poprzednim na liście",
-        #                variable=restriction_choice, value=2, wraplength=200).pack(side = tk.TOP, anchor=tk.W)
-        # tk.Radiobutton(restrictions_frame, text="Następny wierzchołek nie może być oddalony o dwa miejsca na liście od poprzedniego",
-        #                variable=restriction_choice, value=3, wraplength=200).pack(side = tk.TOP, anchor=tk.W)
+        example_frame.pack(side = tk.TOP, fill = "x")
+        load_example_button.pack(side = tk.LEFT, anchor = tk.W)
         
         list_outer_frame.pack(side = tk.TOP, fill = 'x', pady = 10)
         list_canvas.pack(side = tk.LEFT)
@@ -311,3 +308,21 @@ class ChaosGameFrame(tk.Frame):
         self.__point_entry_x.insert(0, "{0:0.2f}".format(self.__points[index][0]))
         self.__point_entry_y.insert(0, "{0:0.2f}".format(self.__points[index][1]))
         self.__changed_index = index
+
+    def __loadExample(self, plot1, canvas, iterLabel, jumpLabel, pointsFrame):
+
+        info = {"points": [[0.0, 0.0], [500.0, 0.0], [250.0, 500.0]], "iterations": 100000, "jump": 0.5}
+
+        self.__points = info['points']
+        self.__refreshPointsList(pointsFrame)
+
+        self.__last_iterations_number = info['iterations']
+        self.__last_jump = info['jump']
+
+        iterLabel.delete(0, tk.END)
+        jumpLabel.delete(0, tk.END)
+        iterLabel.insert(0, str(self.__last_iterations_number))
+        jumpLabel.insert(0, str(self.__last_jump))
+
+        plot(plot1, canvas, vertices=self.__points)
+        self.__fractal_plotted = False

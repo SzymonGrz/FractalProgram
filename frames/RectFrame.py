@@ -31,6 +31,8 @@ class RectFrame(tk.Frame):
         rectangle_frame = ttk.Frame(widgets_frame)
         canvas_buttons_frame = ttk.Frame(widgets_frame)
 
+        example_frame = ttk.Frame(widgets_frame)
+
         button = ttk.Button(back_button_frame, text="Powrót",
                            command=lambda: parent.switch_frame("start"))
 
@@ -69,6 +71,8 @@ class RectFrame(tk.Frame):
 
         clear_button = ttk.Button(canvas_buttons_frame, text = "Wyczyść", command = self.__clearPlot)
 
+        load_example_button = ttk.Button(example_frame, text = "Przykład", command = self.__loadExample)
+
         #########################################
 
         widgets_frame.pack(side=tk.LEFT, fill='y', anchor = tk.NW, padx=10, pady = 10)
@@ -102,6 +106,9 @@ class RectFrame(tk.Frame):
         save_button.pack(side = tk.LEFT, anchor=tk.W, padx = 12)
         load_button.pack(side = tk.LEFT, anchor=tk.W)
         clear_button.pack(side = tk.LEFT, anchor = tk.W, padx = 12)
+
+        example_frame.pack(side = tk.LEFT, fill = "x")
+        load_example_button.pack(side = tk.LEFT, anchor = tk.W)
 
     def __saveConfig(self):
         
@@ -315,3 +322,17 @@ class RectFrame(tk.Frame):
 
     def __clearPlot(self):
         plot(self.__plot1, self.__canvas)
+
+    def __loadExample(self):
+
+        info = {"1": [-12.810950318671843, 150.7512515070591, 93.2487484929409, -18.810950318671857, 262.8109503186718, 87.24874849294093, 156.75125150705904, 256.810950318672], 
+                "27": [184.0, 308.0, 184.0, 108.0, 384.0, 108.0, 384.0, 308.0], 
+                "69": [179.25208095264068, 448.4967409345892, 16.503259065410816, 332.2520809526406, 132.7479190473595, 169.50325906541073, 295.4967409345892, 285.74791904735946]}
+
+        self.__draw_canvas.delete("all")
+        self.__list_of_rectangles.clear()
+        
+            
+        for _, value in info.items():
+            x1, y1, x2, y2, x3, y3, x4, y4 = value
+            self.__createRectangle(x1, y1, x2, y2, x3, y3, x4, y4)

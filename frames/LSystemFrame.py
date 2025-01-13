@@ -35,6 +35,8 @@ class LSystemFrame(tk.Frame):
         rule_list_frame = ttk.Frame(widgets_frame)
         info_frame = ttk.Frame(widgets_frame)
 
+        example_frame = ttk.Frame(widgets_frame)
+
         canvas_frame = tk.Frame(self)
 
         button = ttk.Button(back_button_frame, text="Powrót",
@@ -74,7 +76,9 @@ class LSystemFrame(tk.Frame):
         
         self.__image_button = ttk.Button(save_load_frame, text = "Zapisz obraz", 
                                   command = self.__saveImageToFile)
-
+        
+        self.__load_example_button = ttk.Button(example_frame, text = "Przykład", 
+                command = lambda: self.__loadExample(start_entry, angle_entry, rules_label))
         #######################################################
 
         widgets_frame.pack(side=tk.LEFT, fill='y', anchor = tk.NW, padx=10, pady = 10)
@@ -117,6 +121,9 @@ class LSystemFrame(tk.Frame):
         self.__save_button.pack(side = tk.LEFT, anchor = tk.W)
         self.__load_button.pack(side = tk.LEFT, anchor= tk.W, padx = 15)
         self.__image_button.pack(side = tk.LEFT, anchor = tk.W)
+
+        example_frame.pack(side = tk.TOP, fill = "x", pady = 5)
+        self.__load_example_button.pack(side = tk.LEFT, anchor = tk.W)
 
         info_frame.pack(side = tk.TOP, fill = "x", pady = 20)
         ttk.Label(info_frame, text = "F, G - przesuń się i narysuj linię\n" "f - przesuń się\n"
@@ -170,6 +177,7 @@ class LSystemFrame(tk.Frame):
         self.__image_button.configure(state = "disabled")
         self.__stop_button.configure(state = "normal")
         self.__clear_button.configure(state = "disabled")
+        self.__load_example_button.configure(state = "disabled")
         self.__screen.cv.unbind("<Button-1>")
         self.__screen.cv.unbind('<Button-3>')
 
@@ -222,6 +230,7 @@ class LSystemFrame(tk.Frame):
         self.__image_button.configure(state = "normal")
         self.__stop_button.configure(state = "disabled")
         self.__clear_button.configure(state = "normal")
+        self.__load_example_button.configure(state = "normal")
         self.__screen.cv.bind("<Button-1>", self.__onLeftClick)
         self.__screen.cv.bind('<Button-3>', self.__onRightClick)
         self.__turtle.st()
@@ -318,3 +327,18 @@ class LSystemFrame(tk.Frame):
         self.__turtle.ht()
         ImageGrab.grab().crop((x, y, x1, y1)).save(file.name)
         self.__turtle.st()
+
+    def __loadExample(self, startEntry, angleEntry, rulesLabel):
+
+        info = {"rules": {"L": "-RF+LFL+FR-", "R": "+LF-RFR-FL+"}, "start": "LFL+F+LFL", "angle": "90"}
+
+        self.__rules = info['rules']
+        start = info['start']
+        angle = info['angle']
+        startEntry.delete(0, tk.END)
+        angleEntry.delete(0, tk.END)
+        startEntry.insert(0, start)
+        angleEntry.insert(0, str(angle))
+
+
+        self.__refreshRulesLabel(rulesLabel)
